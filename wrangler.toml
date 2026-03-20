@@ -3,7 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
 [vars]
-ADMIN_EMAILS = ""
+ADMIN_EMAILS = "z54981220@gmail.com"
 
 [observability]
 [observability.logs]
@@ -11,6 +11,6 @@ enabled = true
 invocation_logs = true
 
 [[kv_namespaces]]
-binding = "SHORT_URLS"
-id = "<placeholder>"
-preview_id = "<placeholder>"
+binding = "OSHI_SHORT_URLS"
+id = "855beb8f5a4344f7b891ecf28e48822d"
+preview_id = "48c152d10c4940e38aa26a66e359a0f8"

@@ -13,8 +13,8 @@ const app = new Hono<{ Bindings: Bindings; Variables: { adminEmail: string } }>(
 // --- Public routes (defined before /:slug catch-all) ---
 
 app.get('/', async (c) => {
-  const slugs = await getListedIndex(c.env.SHORT_URLS);
-  const mappings = await getMappingsBySlugs(c.env.SHORT_URLS, slugs);
+  const slugs = await getListedIndex(c.env.OSHI_SHORT_URLS);
+  const mappings = await getMappingsBySlugs(c.env.OSHI_SHORT_URLS, slugs);
   const listed = mappings
     .filter((m) => m.status === 'approved' && m.listed)
     .sort((a, b) => (b.approvedAt ?? '').localeCompare(a.approvedAt ?? ''));
@@ -42,7 +42,7 @@ app.post('/new', async (c) => {
   // Determine slug
   let slug = data.slug;
   if (slug) {
-    if (await slugExists(c.env.SHORT_URLS, slug)) {
+    if (await slugExists(c.env.OSHI_SHORT_URLS, slug)) {
       return c.html(
         renderSubmitForm(
           [{ field: 'slug', message: '此短網址已被使用，請換一個' }],
@@ -52,7 +52,7 @@ app.post('/new', async (c) => {
       );
     }
   } else {
-    const generated = await generateSlug(c.env.SHORT_URLS);
+    const generated = await generateSlug(c.env.OSHI_SHORT_URLS);
     if (!generated) {
       return c.html(
         renderSubmitForm([], body, '無法自動產生短網址，請手動輸入一個'),
@@ -79,7 +79,7 @@ app.post('/new', async (c) => {
     approvedAt: null,
   };
 
-  await putMapping(c.env.SHORT_URLS, mapping);
+  await putMapping(c.env.OSHI_SHORT_URLS, mapping);
 
   return c.redirect(`/new?submitted=${slug}`, 302);
 });
@@ -90,7 +90,7 @@ app.use('/admin/*', requireAdmin);
 app.use('/admin', requireAdmin);
 
 app.get('/admin', async (c) => {
-  const mappings = await getAllMappings(c.env.SHORT_URLS);
+  const mappings = await getAllMappings(c.env.OSHI_SHORT_URLS);
   const adminEmail = c.get('adminEmail');
   return c.html(renderAdminDashboard(mappings, adminEmail));
 });
@@ -108,7 +108,7 @@ for (const [action, transition] of Object.entries(TRANSITIONS)) {
     const { slug } = await c.req.json<{ slug: string }>();
     if (!slug) return c.json({ ok: false, error: 'Missing slug' }, 400);
 
-    const mapping = await getMapping(c.env.SHORT_URLS, slug);
+    const mapping = await getMapping(c.env.OSHI_SHORT_URLS, slug);
     if (!mapping) return c.json({ ok: false, error: 'Mapping not found' }, 404);
     if (mapping.status !== transition.from) {
       return c.json({ ok: false, error: `Cannot ${action}: status is ${mapping.status}` }, 400);
@@ -119,14 +119,14 @@ for (const [action, transition] of Object.entries(TRANSITIONS)) {
     mapping.updatedAt = now;
     if (transition.setApproved) mapping.approvedAt = now;
 
-    await putMapping(c.env.SHORT_URLS, mapping);
+    await putMapping(c.env.OSHI_SHORT_URLS, mapping);
 
     // Update listed index
     if (mapping.listed) {
       if (mapping.status === 'approved') {
-        await addToListedIndex(c.env.SHORT_URLS, slug);
+        await addToListedIndex(c.env.OSHI_SHORT_URLS, slug);
       } else {
-        await removeFromListedIndex(c.env.SHORT_URLS, slug);
+        await removeFromListedIndex(c.env.OSHI_SHORT_URLS, slug);
       }
     }
 
@@ -138,7 +138,7 @@ for (const [action, transition] of Object.entries(TRANSITIONS)) {
 
 app.get('/:slug', async (c) => {
   const slug = c.req.param('slug');
-  const mapping = await getMapping(c.env.SHORT_URLS, slug);
+  const mapping = await getMapping(c.env.OSHI_SHORT_URLS, slug);
 
   if (!mapping || mapping.status !== 'approved') {
     return c.html(renderNotFound(), 404);

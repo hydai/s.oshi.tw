@@ -1,5 +1,5 @@
 export type Bindings = {
-  SHORT_URLS: KVNamespace;
+  OSHI_SHORT_URLS: KVNamespace;
   ADMIN_EMAILS: string;
   DEV_AUTH_EMAIL?: string;
 };

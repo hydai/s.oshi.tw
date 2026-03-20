@@ -1,0 +1,16 @@
+name = "oshi-short-url"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[vars]
+ADMIN_EMAILS = ""
+
+[observability]
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[[kv_namespaces]]
+binding = "SHORT_URLS"
+id = "<placeholder>"
+preview_id = "<placeholder>"

@@ -83,7 +83,7 @@ export function renderSubmitForm(
                 <input type="text" name="slug" placeholder="留空自動產生" class="form-input" maxlength="30" value="${v('slug')}" style="flex: 1;" />
               </div>
               ${err('slug')}
-              <div class="form-hint">2-30 字元，小寫英文、數字與連字號</div>
+              <div class="form-hint">2-30 字元，中英文、數字與連字號</div>
             </div>
 
             <!-- Description -->

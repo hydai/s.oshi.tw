@@ -12,7 +12,7 @@ export function validateUrl(raw: string): string | null {
 
 export function validateSlug(slug: string): boolean {
   if (slug.length < 2 || slug.length > 30) return false;
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return false;
+  if (!/^[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*$/u.test(slug)) return false;
   if (RESERVED_SLUGS.has(slug)) return false;
   return true;
 }
@@ -64,7 +64,7 @@ export function validateSubmission(body: Record<string, string>): ValidationResu
   }
 
   if (slug && !validateSlug(slug)) {
-    errors.push({ field: 'slug', message: '短網址格式不正確（2-30 字元，小寫英數字與連字號）' });
+    errors.push({ field: 'slug', message: '短網址格式不正確（2-30 字元，中英文、數字與連字號）' });
   }
 
   if (description.length > 200) {

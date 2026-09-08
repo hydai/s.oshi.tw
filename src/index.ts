@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { csrf } from 'hono/csrf';
 import { HTTPException } from 'hono/http-exception';
-import type { Bindings, Mapping } from './types';
+import type { Bindings, Mapping, MappingStatus } from './types';
 import { getMapping, putMapping, slugExists, generateSlug, getAllMappings } from './kv';
 import { validateSubmission, couldBeSlug, canonicalSlug, validateSlug } from './validate';
 import { requireAdmin } from './auth';
@@ -149,7 +149,10 @@ app.get('/admin', async (c) => {
 // setApproved stamps approvedAt, which is the public listing sort key and the
 // 核准 date on the dashboard. Only the first approval sets it; re-enabling a
 // disabled mapping must preserve the original date.
-const TRANSITIONS: Record<string, { from: string; to: string; setApproved: boolean }> = {
+const TRANSITIONS: Record<
+  string,
+  { from: MappingStatus; to: MappingStatus; setApproved: boolean }
+> = {
   approve: { from: 'pending', to: 'approved', setApproved: true },
   reject: { from: 'pending', to: 'rejected', setApproved: false },
   disable: { from: 'approved', to: 'disabled', setApproved: false },
@@ -174,7 +177,7 @@ for (const [action, transition] of Object.entries(TRANSITIONS)) {
     }
 
     const now = new Date().toISOString();
-    mapping.status = transition.to as Mapping['status'];
+    mapping.status = transition.to;
     mapping.updatedAt = now;
     if (transition.setApproved) mapping.approvedAt = now;
 

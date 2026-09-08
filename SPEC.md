@@ -97,7 +97,8 @@ Redirect visitors to the target URL.
 | **URL validation** | Must be a valid HTTP/HTTPS URL. Reject otherwise. |
 | **Title validation** | Must be non-empty, max 100 characters. |
 | **Optional field validation** | `description` max 200 chars; `photo` must be valid HTTP/HTTPS URL if provided; `author` max 50 chars; `contact` max 100 chars; `notes` max 500 chars. Reject with field-level error if exceeded. |
-| **Slug format** | Lowercase alphanumeric + hyphens, 2–30 chars. No leading/trailing hyphens. |
+| **Slug format** | 2–30 characters, counted as characters rather than UTF-16 units. Allowed: `a-z`, `0-9`, Han, Hiragana, Katakana and `ー`, joined by single hyphens. No leading/trailing hyphens. Other scripts are refused so a homograph cannot impersonate an existing slug. |
+| **Slug canonicalization** | Slugs are NFKC-normalized and lowercased before validation, storage and lookup, so `MyLink`, `ＭｙＬｉｎｋ` and `mylink` are one link. Invisible characters are refused. |
 | **Slug uniqueness** | Reject if slug already exists in KV. |
 | **Slug auto-generation** | If blank, generate a random 6-char lowercase alphanumeric slug. Retry up to 5 times on collision. If all retries collide, return 409 asking the submitter to provide a slug manually. |
 | **Reserved slugs** | Reject slugs matching reserved paths (`new`, `admin`). |

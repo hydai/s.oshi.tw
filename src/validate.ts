@@ -3,6 +3,17 @@ const RESERVED_SLUGS = new Set(['new', 'admin']);
 // KV rejects keys longer than 512 bytes; 'slug:' eats 5 of them.
 const MAX_SLUG_BYTES = 512 - 'slug:'.length;
 
+const SLUG_MIN = 2;
+const SLUG_MAX = 30;
+
+// Latin letters, digits and the CJK scripts this community actually uses: Han
+// for Chinese, Hiragana/Katakana for Japanese names, plus the prolonged sound
+// mark ー, which Unicode classifies as Common rather than Katakana. Everything
+// else is refused, which is what stops Cyrillic 'оshi' impersonating 'oshi' in
+// a listing the admin approves by eye.
+const SLUG_CHAR = '[a-z0-9\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}ー]';
+const SLUG_RE = new RegExp(`^${SLUG_CHAR}+(?:-${SLUG_CHAR}+)*$`, 'u');
+
 /**
  * Cheap pre-filter for the redirect catch-all. Deliberately far more
  * permissive than validateSlug: lookups must keep working for every slug
@@ -12,8 +23,18 @@ const MAX_SLUG_BYTES = 512 - 'slug:'.length;
  */
 export function couldBeSlug(slug: string): boolean {
   if (!slug) return false;
-  if (/[.\\\/\s]/.test(slug)) return false;
+  if (/[.\\/\s]/.test(slug)) return false;
   return new TextEncoder().encode(slug).length <= MAX_SLUG_BYTES;
+}
+
+/**
+ * The single normalization step. NFKC folds full-width ｏｓｈｉ onto oshi and
+ * decomposed forms onto composed ones; lowercasing makes /MyLink and /mylink
+ * the same link and keeps 'Admin' from slipping past RESERVED_SLUGS. Must be
+ * applied identically when storing a slug and when looking one up.
+ */
+export function canonicalSlug(raw: string): string {
+  return raw.normalize('NFKC').toLowerCase();
 }
 
 export function validateUrl(raw: string): string | null {
@@ -26,9 +47,16 @@ export function validateUrl(raw: string): string | null {
   }
 }
 
+/** Validates an already-canonical slug; non-canonical input is rejected. */
 export function validateSlug(slug: string): boolean {
-  if (slug.length < 2 || slug.length > 30) return false;
-  if (!/^[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*$/u.test(slug)) return false;
+  if (canonicalSlug(slug) !== slug) return false;
+  // Count characters, not UTF-16 units, so '𠮷' is one character and a 16-char
+  // Extension-B name is not measured as 32.
+  const length = Array.from(slug).length;
+  if (length < SLUG_MIN || length > SLUG_MAX) return false;
+  // Invisible characters would render as a blank link in the listing.
+  if (/\p{Default_Ignorable_Code_Point}/u.test(slug)) return false;
+  if (!SLUG_RE.test(slug)) return false;
   if (RESERVED_SLUGS.has(slug)) return false;
   return true;
 }
@@ -59,7 +87,7 @@ export function validateSubmission(body: Record<string, string>): ValidationResu
 
   const url = (body.url ?? '').trim();
   const title = (body.title ?? '').trim();
-  const slug = (body.slug ?? '').trim();
+  const slug = canonicalSlug((body.slug ?? '').trim());
   const description = (body.description ?? '').trim();
   const photo = (body.photo ?? '').trim();
   const author = (body.author ?? '').trim();
@@ -80,7 +108,7 @@ export function validateSubmission(body: Record<string, string>): ValidationResu
   }
 
   if (slug && !validateSlug(slug)) {
-    errors.push({ field: 'slug', message: '短網址格式不正確（2-30 字元，中英文、數字與連字號）' });
+    errors.push({ field: 'slug', message: '短網址格式不正確（2-30 字元，可用英數字、中日文字與連字號）' });
   }
 
   if (description.length > 200) {

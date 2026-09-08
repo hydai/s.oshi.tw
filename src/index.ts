@@ -3,7 +3,7 @@ import { csrf } from 'hono/csrf';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, Mapping } from './types';
 import { getMapping, putMapping, slugExists, generateSlug, getListedIndex, addToListedIndex, removeFromListedIndex, getMappingsBySlugs, getAllMappings } from './kv';
-import { validateSubmission, couldBeSlug } from './validate';
+import { validateSubmission, couldBeSlug, canonicalSlug } from './validate';
 import { requireAdmin } from './auth';
 import { renderListingPage } from './pages/listing';
 import { renderSubmitForm, renderConfirmation } from './pages/form';
@@ -152,12 +152,14 @@ for (const [action, transition] of Object.entries(TRANSITIONS)) {
 // --- Redirect catch-all (must be last) ---
 
 app.get('/:slug', async (c) => {
-  const slug = c.req.param('slug');
+  const raw = c.req.param('slug');
 
   // Reject anything that cannot be a slug before spending a KV read, so bot
   // probes cost nothing and an over-long key returns 404 instead of throwing.
-  if (!couldBeSlug(slug)) return c.notFound();
+  if (!couldBeSlug(raw)) return c.notFound();
 
+  // Same normalization as submission, so /MyLink resolves to /mylink.
+  const slug = canonicalSlug(raw);
   const mapping = await getMapping(c.env.OSHI_SHORT_URLS, slug);
   if (!mapping || mapping.status !== 'approved') {
     return c.notFound();

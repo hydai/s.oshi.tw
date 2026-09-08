@@ -35,12 +35,7 @@ export function renderSubmitForm(
                 <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
               </svg>
             </div>
-            <span style="
-              font-size: 28px; font-weight: 700; letter-spacing: -0.5px;
-              background: linear-gradient(135deg, var(--accent-pink), var(--accent-blue));
-              -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-              background-clip: text;
-            ">提交短網址</span>
+            <span class="gradient-text" style="font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">提交短網址</span>
           </div>
           <p style="color: var(--text-secondary); font-size: 14px;">
             提交連結至 s.oshi.tw，審核通過後即可使用
@@ -134,7 +129,7 @@ export function renderSubmitForm(
         </div>
 
         <div style="display: flex; justify-content: center; gap: 16px; margin-top: 16px; font-size: 13px;">
-          <a href="/" style="color: #8B5CF6; text-decoration: none;">← 返回列表</a>
+          <a href="/" class="link">← 返回列表</a>
         </div>
       </div>
     `,
@@ -156,9 +151,7 @@ export function renderConfirmation(slug: string, status = 'pending') {
       <div style="max-width: 640px; margin: 0 auto; padding: 48px 16px; text-align: center;">
         <div class="card" style="padding: 48px 32px;">
           <div style="font-size: 48px; margin-bottom: 16px;">&#10003;</div>
-          <h2 style="font-size: 22px; font-weight: 700; margin-bottom: 8px;
-            background: linear-gradient(135deg, var(--accent-pink), var(--accent-blue));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          <h2 class="gradient-text" style="font-size: 22px; font-weight: 700; margin-bottom: 8px;">
             提交成功！
           </h2>
           <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 24px;">
@@ -172,9 +165,9 @@ export function renderConfirmation(slug: string, status = 'pending') {
             </div>
           </div>
           <div style="display: flex; justify-content: center; gap: 16px; font-size: 13px;">
-            <a href="/new" style="color: #8B5CF6; text-decoration: none;">提交另一個</a>
+            <a href="/new" class="link">提交另一個</a>
             <span style="color: var(--text-tertiary);">|</span>
-            <a href="/" style="color: #8B5CF6; text-decoration: none;">返回列表</a>
+            <a href="/" class="link">返回列表</a>
           </div>
         </div>
       </div>

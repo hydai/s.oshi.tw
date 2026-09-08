@@ -54,12 +54,7 @@ export function renderListingPage(mappings: Mapping[]) {
                 <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
               </svg>
             </div>
-            <span style="
-              font-size: 28px; font-weight: 700; letter-spacing: -0.5px;
-              background: linear-gradient(135deg, var(--accent-pink), var(--accent-blue));
-              -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-              background-clip: text;
-            ">s.oshi.tw</span>
+            <span class="gradient-text" style="font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">s.oshi.tw</span>
           </div>
           <p style="color: var(--text-secondary); font-size: 14px;">
             oshi.tw 社群短網址服務
@@ -77,7 +72,7 @@ export function renderListingPage(mappings: Mapping[]) {
 
         <!-- Footer -->
         <div style="display: flex; justify-content: center; gap: 16px; margin-top: 24px; font-size: 13px;">
-          <a href="/new" style="color: #8B5CF6; text-decoration: none;">提交新短網址</a>
+          <a href="/new" class="link">提交新短網址</a>
         </div>
         <p style="text-align: center; font-size: 11px; color: var(--text-tertiary); margin-top: 16px;">
           s.oshi.tw &mdash; oshi.tw 社群短網址服務

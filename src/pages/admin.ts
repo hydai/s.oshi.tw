@@ -111,16 +111,14 @@ export function renderAdminDashboard(mappings: Mapping[], adminEmail: string) {
         <!-- Header -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 12px;">
           <div>
-            <h1 style="font-size: 24px; font-weight: 700;
-              background: linear-gradient(135deg, var(--accent-pink), var(--accent-blue));
-              -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+            <h1 class="gradient-text" style="font-size: 24px; font-weight: 700;">
               s.oshi.tw 管理後台
             </h1>
             <p style="font-size: 13px; color: var(--text-tertiary); margin-top: 4px;">
               ${adminEmail} ・ 共 ${mappings.length} 筆短網址 ・ 時間為台北時間 (UTC+8)
             </p>
           </div>
-          <a href="/" style="color: #8B5CF6; text-decoration: none; font-size: 13px;">← 返回首頁</a>
+          <a href="/" class="link" style="font-size: 13px;">← 返回首頁</a>
         </div>
 
         ${sectionOrder.map(

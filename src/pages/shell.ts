@@ -32,6 +32,7 @@ export function pageShell(title: string, body: HtmlEscapedString | Promise<HtmlE
       --border-default: #E2E8F0;
       --border-glass: #FFFFFF66;
       --border-accent-pink: #FBCFE8;
+      --link: #8B5CF6;
       --radius-lg: 12px;
       --radius-xl: 16px;
       --radius-2xl: 20px;
@@ -105,6 +106,17 @@ export function pageShell(title: string, body: HtmlEscapedString | Promise<HtmlE
     }
     .btn-primary:hover { opacity: 0.92; box-shadow: 0 6px 20px rgba(236, 72, 153, 0.3); }
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* The pink-to-blue wordmark treatment, previously copied into five pages. */
+    .gradient-text {
+      background: linear-gradient(135deg, var(--accent-pink), var(--accent-blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .link { color: var(--link); text-decoration: none; }
+    .link:hover { text-decoration: underline; }
 
     .card {
       background: var(--bg-surface-glass);

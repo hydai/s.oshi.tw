@@ -1,7 +1,7 @@
 import { html } from 'hono/html';
 import type { Mapping } from '../types';
 import { firstGrapheme } from '../format';
-import { pageShell } from './shell';
+import { pageHeader, pageShell } from './shell';
 
 function renderCard(m: Mapping) {
   const link = `/${m.slug}`;
@@ -41,25 +41,7 @@ export function renderListingPage(mappings: Mapping[]) {
     '短網址列表',
     html`
       <div style="max-width: 720px; margin: 0 auto; padding: 48px 16px;">
-        <!-- Header -->
-        <div style="text-align: center; margin-bottom: 32px;">
-          <div style="display: inline-flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-            <div style="
-              width: 40px; height: 40px; border-radius: var(--radius-lg);
-              background: linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light));
-              display: flex; align-items: center; justify-content: center;
-            ">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-              </svg>
-            </div>
-            <span class="gradient-text" style="font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">s.oshi.tw</span>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 14px;">
-            oshi.tw 社群短網址服務
-          </p>
-        </div>
+        ${pageHeader('s.oshi.tw', 'oshi.tw 社群短網址服務')}
 
         <!-- Listing -->
         ${mappings.length > 0

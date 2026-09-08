@@ -1,6 +1,6 @@
 import { html } from 'hono/html';
 import type { FieldError } from '../validate';
-import { pageShell } from './shell';
+import { pageHeader, pageShell } from './shell';
 
 function errorFor(errors: FieldError[], field: string): string {
   const err = errors.find((e) => e.field === field);
@@ -22,25 +22,7 @@ export function renderSubmitForm(
     '提交短網址',
     html`
       <div style="max-width: 640px; margin: 0 auto; padding: 48px 16px;">
-        <!-- Header -->
-        <div style="text-align: center; margin-bottom: 32px;">
-          <div style="display: inline-flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-            <div style="
-              width: 40px; height: 40px; border-radius: var(--radius-lg);
-              background: linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light));
-              display: flex; align-items: center; justify-content: center;
-            ">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-              </svg>
-            </div>
-            <span class="gradient-text" style="font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">提交短網址</span>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 14px;">
-            提交連結至 s.oshi.tw，審核通過後即可使用
-          </p>
-        </div>
+        ${pageHeader('提交短網址', '提交連結至 s.oshi.tw，審核通過後即可使用')}
 
         <!-- Form Card -->
         <div class="card">

@@ -95,7 +95,6 @@ app.post('/new', async (c) => {
 // fetch is not a form content type and passes through untouched.
 app.use('/admin/*', csrf());
 app.use('/admin/*', requireAdmin);
-app.use('/admin', requireAdmin);
 
 app.get('/admin', async (c) => {
   const mappings = await getAllMappings(c.env.OSHI_SHORT_URLS);

@@ -110,8 +110,14 @@ const TRANSITIONS: Record<string, { from: string; to: string; setApproved: boole
 
 for (const [action, transition] of Object.entries(TRANSITIONS)) {
   app.post(`/admin/api/${action}`, async (c) => {
-    const { slug } = await c.req.json<{ slug: string }>();
-    if (!slug) return c.json({ ok: false, error: 'Missing slug' }, 400);
+    // Parse defensively: a malformed body must not become a 500, and a
+    // non-string slug would transition the mapping while pushing an
+    // unremovable value into the listed index.
+    const body = await c.req.json<unknown>().catch(() => null);
+    const slug = (body as { slug?: unknown } | null)?.slug;
+    if (typeof slug !== 'string' || !slug) {
+      return c.json({ ok: false, error: 'Missing or invalid slug' }, 400);
+    }
 
     const mapping = await getMapping(c.env.OSHI_SHORT_URLS, slug);
     if (!mapping) return c.json({ ok: false, error: 'Mapping not found' }, 404);

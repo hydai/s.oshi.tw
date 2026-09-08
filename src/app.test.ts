@@ -212,6 +212,17 @@ describe('redirect', () => {
     expect(res.headers.get('location')).toBe('https://example.com/target');
   });
 
+  // Lookups go through canonicalSlug, so a key stored in a non-canonical form
+  // under the older rules is not reachable. The live namespace held only
+  // canonical keys when this changed, but the behaviour is worth pinning: if a
+  // non-canonical key ever appears, it needs a re-key, not a silent 404.
+  it('cannot reach a key stored in a non-canonical form', async () => {
+    kv.store.set('slug:LegacyKey', JSON.stringify(mapping({ slug: 'LegacyKey', status: 'approved' })));
+    expect(kv.store.has('slug:legacykey')).toBe(false);
+    expect((await req('/LegacyKey')).status).toBe(404);
+    expect((await req('/legacykey')).status).toBe(404);
+  });
+
   it.each(['/waiting', '/off', '/nosuchthing'])('answers 404 for %s', async (path) => {
     const res = await req(path);
     expect(res.status).toBe(404);

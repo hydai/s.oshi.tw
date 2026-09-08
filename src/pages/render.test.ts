@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { formatTaipei, renderAdminDashboard } from './admin';
+import { renderAdminDashboard } from './admin';
+import { formatTaipei } from '../format';
 import { renderListingPage } from './listing';
 import { renderConfirmation, renderSubmitForm } from './form';
 import { mapping } from '../test-support';
@@ -23,19 +24,30 @@ describe('formatTaipei', () => {
 
 describe('admin dashboard', () => {
   // Approving a listed card publishes its image to every visitor, so the
-  // reviewer has to be able to see it first.
-  it('shows the submitted photo and its host', async () => {
+  // reviewer has to be able to see the URL and its host before deciding.
+  it('shows the submitted photo URL', async () => {
     const html = await render(
       renderAdminDashboard([mapping({ photo: 'https://img.example/pic.jpg' })], 'admin@example.com'),
     );
     expect(html).toContain('https://img.example/pic.jpg');
-    expect(html).toMatch(/<img src="https:\/\/img\.example\/pic\.jpg"/);
-    expect(html).toContain('referrerpolicy="no-referrer"');
+    expect(html).toContain('顯示圖片預覽');
   });
 
-  it('renders no image markup when no photo was submitted', async () => {
+  // The URL is attacker-controlled, so rendering it as an image on page load
+  // would make the reviewer's browser call that host on every dashboard visit.
+  it('does not fetch the photo until the reviewer asks for it', async () => {
+    const html = await render(
+      renderAdminDashboard([mapping({ photo: 'https://attacker.example/beacon.png' })], 'admin@example.com'),
+    );
+    expect(html).not.toMatch(/<img[^>]*src=/);
+    expect(html).toContain('data-photo="https://attacker.example/beacon.png"');
+  });
+
+  it('renders nothing photo-related when no photo was submitted', async () => {
     const html = await render(renderAdminDashboard([mapping({})], 'admin@example.com'));
     expect(html).not.toContain('<img');
+    expect(html).not.toContain('data-photo');
+    expect(html).not.toContain('顯示圖片預覽');
   });
 
   it('escapes a photo URL that tries to break out of the attribute', async () => {

@@ -69,6 +69,33 @@ describe('validateSlug', () => {
     }
   });
 
+  // The CJK Radicals Supplement is Script=Han and NFKC-stable, so without an
+  // explicit refusal it offers a same-script homograph for every radical.
+  it.each([
+    ['⻤滅之刃', '鬼滅之刃', 'U+2EE4 CJK RADICAL GHOST'],
+    ['⻩金', '黄金', 'U+2EE9 CJK RADICAL YELLOW'],
+    ['⻄瓜', '西瓜', 'U+2EC4 CJK RADICAL WEST'],
+  ])('rejects the radical lookalike %j while accepting %j (%s)', (lookalike, real) => {
+    expect(canonicalSlug(lookalike)).toBe(lookalike);
+    expect(validateSlug(lookalike)).toBe(false);
+    expect(validateSlug(real)).toBe(true);
+  });
+
+  it('refuses the whole CJK Radicals Supplement block', () => {
+    for (let cp = 0x2e80; cp <= 0x2eff; cp++) {
+      expect(validateSlug(String.fromCodePoint(cp).repeat(2))).toBe(false);
+    }
+  });
+
+  // ー renders as a dash, so on its own it would sidestep every hyphen rule.
+  it.each(['ーoshi', 'oshiー', 'osーーhi', 'ーー', 'ーーーー'])('rejects %j, a dash-like slug with no kana', (slug) =>
+    expect(validateSlug(slug)).toBe(false),
+  );
+
+  it.each(['ラーメン', 'コーヒー', 'ゲーム', 'すーぱー'])('still accepts %j, where ー is part of the word', (slug) =>
+    expect(validateSlug(slug)).toBe(true),
+  );
+
   it('counts characters, not UTF-16 units', () => {
     const sixteenAstral = '𠮷'.repeat(16);
     expect(sixteenAstral.length).toBe(32);
@@ -77,7 +104,11 @@ describe('validateSlug', () => {
     expect(validateSlug('𠮷'.repeat(31))).toBe(false);
   });
 
-  it('accepts every slug already stored in production', () => {
+  // Checked against the live namespace before the rules were tightened: these
+  // were the only three keys, and all three were already canonical. This does
+  // not generalise to any slug the old rule allowed, which is the point of the
+  // migration test in app.test.ts.
+  it('accepts the three slugs the live namespace held when the rules changed', () => {
     for (const slug of ['mpstore', 'sfstore', '子午計畫官方賣場']) {
       expect(canonicalSlug(slug)).toBe(slug);
       expect(validateSlug(slug)).toBe(true);
@@ -86,8 +117,10 @@ describe('validateSlug', () => {
 });
 
 describe('couldBeSlug', () => {
+  // couldBeSlug is only the cheap first stage. It passing does not mean the
+  // path resolves: the canonical form still has to match a stored key.
   it.each(['oshi', 'mpstore', '子午計畫官方賣場', 'Anything-Old', 'оshi', '한글'])(
-    'stays permissive for %j so live links keep resolving',
+    'does not reject %j at the pre-filter stage',
     (slug) => expect(couldBeSlug(slug)).toBe(true),
   );
 

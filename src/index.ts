@@ -83,7 +83,9 @@ app.post('/new', async (c) => {
 
   await putMapping(c.env.OSHI_SHORT_URLS, mapping);
 
-  return c.redirect(`/new?submitted=${slug}`, 302);
+  // Hono only percent-encodes a Location outside the Latin-1 range, so an
+  // accented slug would otherwise leave the header holding raw bytes.
+  return c.redirect(`/new?submitted=${encodeURIComponent(slug)}`, 302);
 });
 
 // --- Admin routes ---

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { canonicalSlug, couldBeSlug, validateSlug, validateSubmission, validateUrl } from './validate';
+import { formatTaipei } from './pages/admin';
 
 describe('canonicalSlug', () => {
   it.each([
@@ -126,5 +127,20 @@ describe('validateSubmission', () => {
   it('treats a checked listed box as opt-in', () => {
     expect(validateSubmission({ ...base, listed: 'on' })).toMatchObject({ data: { listed: true } });
     expect(validateSubmission({ ...base, listed: 'off' })).toMatchObject({ data: { listed: false } });
+  });
+});
+
+describe('formatTaipei', () => {
+  it.each([
+    ['2026-09-08T02:05:00.000Z', '2026-09-08 10:05'],
+    ['2026-01-15T03:00:00.000Z', '2026-01-15 11:00'],
+    ['2026-09-07T16:30:00.000Z', '2026-09-08 00:30'],
+    ['2026-12-31T20:00:00.000Z', '2027-01-01 04:00'],
+  ])('renders %j as %j', (iso, expected) => {
+    expect(formatTaipei(iso)).toBe(expected);
+  });
+
+  it('passes an unparseable value through unchanged', () => {
+    expect(formatTaipei('not a date')).toBe('not a date');
   });
 });

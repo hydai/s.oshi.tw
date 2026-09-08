@@ -2,6 +2,17 @@ import { html } from 'hono/html';
 import type { Mapping, MappingStatus } from '../types';
 import { pageShell } from './shell';
 
+/**
+ * Timestamps are stored as UTC ISO strings but read by an admin in Taiwan,
+ * which has been UTC+8 year-round since 1980. A fixed offset avoids depending
+ * on time-zone data being present in the runtime.
+ */
+export function formatTaipei(iso: string): string {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return iso;
+  return new Date(ms + 8 * 60 * 60 * 1000).toISOString().slice(0, 16).replace('T', ' ');
+}
+
 const STATUS_LABELS: Record<MappingStatus, string> = {
   pending: '待審核',
   approved: '已核准',
@@ -72,8 +83,8 @@ function renderRow(m: Mapping) {
           ${m.contact ? html`<div style="font-size: 12px; color: var(--text-tertiary);">聯絡：${m.contact}</div>` : html``}
           ${m.notes ? html`<div style="font-size: 12px; color: var(--text-tertiary); margin-top: 4px; padding: 8px; background: var(--bg-surface-frosted); border-radius: 8px;">備註：${m.notes}</div>` : html``}
           <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 6px;">
-            建立：${m.createdAt.slice(0, 16).replace('T', ' ')}
-            ${m.approvedAt ? html` ・ 核准：${m.approvedAt.slice(0, 16).replace('T', ' ')}` : html``}
+            建立：${formatTaipei(m.createdAt)}
+            ${m.approvedAt ? html` ・ 核准：${formatTaipei(m.approvedAt)}` : html``}
           </div>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
@@ -114,7 +125,7 @@ export function renderAdminDashboard(mappings: Mapping[], adminEmail: string) {
               s.oshi.tw 管理後台
             </h1>
             <p style="font-size: 13px; color: var(--text-tertiary); margin-top: 4px;">
-              ${adminEmail} ・ 共 ${mappings.length} 筆短網址
+              ${adminEmail} ・ 共 ${mappings.length} 筆短網址 ・ 時間為台北時間 (UTC+8)
             </p>
           </div>
           <a href="/" style="color: #8B5CF6; text-decoration: none; font-size: 13px;">← 返回首頁</a>

@@ -13,7 +13,7 @@ function renderCard(m: Mapping) {
           ${m.photo
             ? html`<img src="${m.photo}" alt="" style="width: 56px; height: 56px; border-radius: var(--radius-lg); object-fit: cover; flex-shrink: 0;" />`
             : html`<div style="width: 56px; height: 56px; border-radius: var(--radius-lg); background: linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light)); flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
-                <span style="font-size: 24px; color: white; font-weight: 700;">${m.title[0]}</span>
+                <span style="font-size: 24px; color: white; font-weight: 700;">${Array.from(m.title)[0] ?? ''}</span>
               </div>`}
           <div style="flex: 1; min-width: 0;">
             <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">

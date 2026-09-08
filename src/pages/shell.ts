@@ -36,7 +36,10 @@ export function pageShell(title: string, body: HtmlEscapedString | Promise<HtmlE
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'DM Sans', sans-serif;
+      /* DM Sans carries no CJK glyphs and the whole UI is Chinese, so the
+         fallbacks below do the real work on every page. */
+      font-family: 'DM Sans', 'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei',
+        'Hiragino Sans', 'Noto Sans CJK TC', sans-serif;
       background: linear-gradient(135deg, var(--bg-page-start) 0%, var(--bg-page-mid) 50%, var(--bg-page-end) 100%);
       background-attachment: fixed;
       min-height: 100vh;

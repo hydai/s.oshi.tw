@@ -32,7 +32,19 @@ app.get('/new', (c) => {
 });
 
 app.post('/new', async (c) => {
-  const body = await c.req.parseBody() as Record<string, string>;
+  // parseBody yields File objects for file parts and arrays for repeated
+  // fields, and throws outright on a boundary-less multipart header. The
+  // validator works on strings, so coerce here and answer a malformed body
+  // with the 400 the spec promises rather than a 500.
+  const raw = await c.req.parseBody().catch(() => null);
+  if (!raw) {
+    return c.html(renderSubmitForm([], {}, '無法解析表單內容，請重新提交'), 400);
+  }
+  const body: Record<string, string> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value === 'string') body[key] = value;
+  }
+
   const result = validateSubmission(body);
 
   if (!result.ok) {

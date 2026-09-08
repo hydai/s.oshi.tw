@@ -195,6 +195,21 @@ describe('validateSubmission', () => {
     if (!r.ok) expect(r.errors.map((e) => e.field)).toContain('slug');
   });
 
+  // url and photo were the only fields with no cap, so one anonymous request
+  // could store a value of any size and print it into both pages.
+  it.each(['url', 'photo'])('caps the length of %s', (field) => {
+    const long = 'https://example.com/' + 'a'.repeat(2100);
+    const r = validateSubmission({ ...base, [field]: long });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.map((e) => e.field)).toContain(field);
+  });
+
+  it.each(['url', 'photo'])('still accepts a long but reasonable %s', (field) => {
+    const ok = 'https://example.com/?q=' + 'a'.repeat(2000);
+    expect(ok.length).toBeLessThanOrEqual(2048);
+    expect(validateSubmission({ ...base, [field]: ok }).ok).toBe(true);
+  });
+
   it('reports every failing field at once', () => {
     const r = validateSubmission({ url: 'nope', title: '', slug: 'admin', description: 'd'.repeat(201) });
     expect(r.ok).toBe(false);

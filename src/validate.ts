@@ -71,6 +71,12 @@ function charCount(text: string): number {
   return Array.from(text).length;
 }
 
+// Every other field is capped; these two were not, so one anonymous request
+// could store a value of any size and print it into both the dashboard and the
+// public listing. 2048 is the length browsers and proxies have long treated as
+// the practical ceiling for a URL.
+const MAX_URL_LENGTH = 2048;
+
 /** Validates an already-canonical slug; non-canonical input is rejected. */
 export function validateSlug(slug: string): boolean {
   if (canonicalSlug(slug) !== slug) return false;
@@ -123,6 +129,8 @@ export function validateSubmission(body: Record<string, string>): ValidationResu
 
   if (!url) {
     errors.push({ field: 'url', message: '請輸入目標網址' });
+  } else if (charCount(url) > MAX_URL_LENGTH) {
+    errors.push({ field: 'url', message: `目標網址不可超過 ${MAX_URL_LENGTH} 字` });
   } else if (!validateUrl(url)) {
     errors.push({ field: 'url', message: '請輸入有效的 HTTP/HTTPS 網址' });
   }
@@ -141,7 +149,9 @@ export function validateSubmission(body: Record<string, string>): ValidationResu
     errors.push({ field: 'description', message: '描述不可超過 200 字' });
   }
 
-  if (photo && !validateUrl(photo)) {
+  if (photo && charCount(photo) > MAX_URL_LENGTH) {
+    errors.push({ field: 'photo', message: `圖片網址不可超過 ${MAX_URL_LENGTH} 字` });
+  } else if (photo && !validateUrl(photo)) {
     errors.push({ field: 'photo', message: '圖片網址格式不正確' });
   }
 

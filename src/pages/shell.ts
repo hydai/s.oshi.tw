@@ -7,6 +7,9 @@ export function pageShell(title: string, body: HtmlEscapedString | Promise<HtmlE
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Listing cards embed submitter-chosen image URLs. Nothing here needs a
+       referrer, and those hosts should not learn which page pulled them. -->
+  <meta name="referrer" content="no-referrer" />
   <title>${title} — s.oshi.tw</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

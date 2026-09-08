@@ -109,6 +109,15 @@ describe('listing page', () => {
     expect(html).not.toContain('�');
   });
 
+  it('hardens the submitter-supplied image every visitor loads', async () => {
+    const html = await render(
+      renderListingPage([mapping({ status: 'approved', listed: true, photo: 'https://tracker.example/p.png' })]),
+    );
+    expect(html).toContain('referrerpolicy="no-referrer"');
+    expect(html).toContain('loading="lazy"');
+    expect(html).toContain('<meta name="referrer" content="no-referrer" />');
+  });
+
   it('names CJK faces in the font stack, since the interface is Chinese', async () => {
     const html = await render(renderListingPage([]));
     expect(html).toContain('PingFang TC');

@@ -12,7 +12,8 @@ function renderCard(m: Mapping) {
            onmouseout="this.style.transform=''; this.style.boxShadow=''">
         <div style="display: flex; gap: 16px; align-items: flex-start;">
           ${m.photo
-            ? html`<img src="${m.photo}" alt="" style="width: 56px; height: 56px; border-radius: var(--radius-lg); object-fit: cover; flex-shrink: 0;" />`
+            ? html`<img src="${m.photo}" alt="" loading="lazy" referrerpolicy="no-referrer"
+                        style="width: 56px; height: 56px; border-radius: var(--radius-lg); object-fit: cover; flex-shrink: 0;" />`
             : html`<div style="width: 56px; height: 56px; border-radius: var(--radius-lg); background: linear-gradient(135deg, var(--accent-pink-light), var(--accent-blue-light)); flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
                 <span style="font-size: 24px; color: white; font-weight: 700;">${firstGrapheme(m.title)}</span>
               </div>`}

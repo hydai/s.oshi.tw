@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import app from './index';
+import { validateSlug } from './validate';
 import { ADMIN_EMAIL, ORIGIN, adminHeaders, env, fakeKV, form, mapping } from './test-support';
 
 type Kv = ReturnType<typeof fakeKV>;
@@ -234,6 +235,24 @@ describe('status transitions', () => {
     kv.reset();
     await adminAction('disable', '{"slug":"old"}');
     expect(kv.puts).toBe(1);
+  });
+});
+
+describe('reserved slugs', () => {
+  // RESERVED_SLUGS is maintained by hand next to the route table. Adding a
+  // route without reserving it would let a submitter register that path and
+  // then find their link shadowed by the route forever.
+  it('refuses every path segment the app registers', () => {
+    const registered = new Set(
+      app.routes
+        .map((r) => r.path.split('/')[1] ?? '')
+        .filter((seg) => seg && !seg.startsWith(':') && seg !== '*'),
+    );
+
+    expect(registered.size).toBeGreaterThan(0);
+    for (const segment of registered) {
+      expect(validateSlug(segment)).toBe(false);
+    }
   });
 });
 

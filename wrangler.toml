@@ -2,6 +2,11 @@ name = "oshi-short-url"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
+# s.oshi.tw is served through a custom domain, and /admin is gated by
+# Cloudflare Access on that hostname. A workers.dev hostname would answer the
+# same Worker without that gate, so keep it off.
+workers_dev = false
+
 [vars]
 ADMIN_EMAILS = "z54981220@gmail.com"
 

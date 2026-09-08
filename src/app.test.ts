@@ -243,15 +243,41 @@ describe('redirect', () => {
     expect(res.headers.get('location')).toBe('https://example.com/target');
   });
 
-  // Lookups go through canonicalSlug, so a key stored in a non-canonical form
-  // under the older rules is not reachable. The live namespace held only
-  // canonical keys when this changed, but the behaviour is worth pinning: if a
-  // non-canonical key ever appears, it needs a re-key, not a silent 404.
-  it('cannot reach a key stored in a non-canonical form', async () => {
-    kv.store.set('slug:LegacyKey', JSON.stringify(mapping({ slug: 'LegacyKey', status: 'approved' })));
+  // Slugs stored before canonicalization existed may not match their canonical
+  // form, so the lookup falls back to the raw key rather than retiring a
+  // published link.
+  it('still resolves a key stored in a non-canonical form', async () => {
+    kv.store.set(
+      'slug:LegacyKey',
+      JSON.stringify(mapping({ slug: 'LegacyKey', url: 'https://legacy.example/x', status: 'approved' })),
+    );
     expect(kv.store.has('slug:legacykey')).toBe(false);
-    expect((await req('/LegacyKey')).status).toBe(404);
-    expect((await req('/legacykey')).status).toBe(404);
+
+    const res = await req('/LegacyKey');
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('https://legacy.example/x');
+  });
+
+  // The legacy record keeps the path, so submitting its canonical spelling
+  // cannot silently redirect visitors to somebody else's target.
+  it('does not let a later canonical submission take over a legacy path', async () => {
+    kv.store.set(
+      'slug:LegacyKey',
+      JSON.stringify(mapping({ slug: 'LegacyKey', url: 'https://legacy.example/x', status: 'approved' })),
+    );
+    kv.store.set(
+      'slug:legacykey',
+      JSON.stringify(mapping({ slug: 'legacykey', url: 'https://newcomer.example/y', status: 'approved' })),
+    );
+
+    expect((await req('/LegacyKey')).headers.get('location')).toBe('https://legacy.example/x');
+    expect((await req('/legacykey')).headers.get('location')).toBe('https://newcomer.example/y');
+  });
+
+  it('spends no extra read when the path is already canonical', async () => {
+    kv.reset();
+    await req('/nosuchthing');
+    expect(kv.gets).toBe(1);
   });
 
   it.each(['/waiting', '/off', '/nosuchthing'])('answers 404 for %s', async (path) => {

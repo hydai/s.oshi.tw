@@ -177,7 +177,17 @@ app.get('/:slug', async (c) => {
   // Reject anything that cannot be a slug before spending a KV read, so bot
   // probes cost nothing and an over-long key returns 404 instead of throwing.
   if (!couldBeSlug(slug)) return c.notFound();
-  const mapping = await getMapping(c.env.OSHI_SHORT_URLS, slug);
+  // Exact match wins, with the canonical form as the fallback for case and
+  // width variation. Slugs stored before canonicalization existed may not match
+  // their canonical form, so this keeps those links alive and keeps them owning
+  // the path a later canonical submission would otherwise take over. Only a
+  // path that is not already canonical costs the second read.
+  const mapping =
+    raw === slug
+      ? await getMapping(c.env.OSHI_SHORT_URLS, slug)
+      : ((await getMapping(c.env.OSHI_SHORT_URLS, raw)) ??
+        (await getMapping(c.env.OSHI_SHORT_URLS, slug)));
+
   if (!mapping || mapping.status !== 'approved') {
     return c.notFound();
   }

@@ -104,18 +104,9 @@ describe('admin API body validation', () => {
     expect(kv.read('a').status).toBe('pending');
   });
 
-  // A non-string slug used to transition the mapping while pushing a value
-  // into the index that strict-equality removal could never delete.
-  it('never lets a non-string slug reach the listed index', async () => {
+  it('leaves the mapping untouched when the slug is not a string', async () => {
     await adminAction('approve', '{"slug":["a"]}');
-    expect(kv.index()).toEqual([]);
-  });
-
-  it('keeps only strings in the index on the happy path', async () => {
-    await adminAction('approve', '{"slug":"a"}');
-    expect(kv.index()).toEqual(['a']);
-    await adminAction('disable', '{"slug":"a"}');
-    expect(kv.index()).toEqual([]);
+    expect(kv.read('a').status).toBe('pending');
   });
 
   it('refuses a transition the state machine does not allow', async () => {
@@ -213,11 +204,36 @@ describe('status transitions', () => {
     expect(body.indexOf('Newer')).toBeLessThan(body.indexOf('Demo'));
   });
 
-  it('removes a disabled mapping from the listed index and puts it back', async () => {
+  // A transition is a single write, so the listing follows from the record
+  // rather than from a second key that could disagree with it.
+  it('drops a disabled mapping from the listing and brings it back', async () => {
     await adminAction('disable', '{"slug":"old"}');
-    expect(kv.index()).toEqual([]);
+    expect(await (await req('/')).text()).not.toContain('s.oshi.tw/old');
+
     await adminAction('enable', '{"slug":"old"}');
-    expect(kv.index()).toEqual(['old']);
+    expect(await (await req('/')).text()).toContain('s.oshi.tw/old');
+  });
+
+  // The old single-key index was a read-modify-write, so overlapping approvals
+  // each read the same array and the last write won, dropping the others from
+  // the listing permanently with no button to put them back.
+  it('keeps every link when approvals overlap', async () => {
+    const pending = ['p1', 'p2', 'p3'];
+    kv.seed(...pending.map((slug) => mapping({ slug, status: 'pending', listed: true, title: slug })));
+
+    const results = await Promise.all(
+      pending.map((slug) => adminAction('approve', JSON.stringify({ slug }))),
+    );
+    expect(results.map((r) => r.status)).toEqual([200, 200, 200]);
+
+    const body = await (await req('/')).text();
+    for (const slug of pending) expect(body).toContain(`s.oshi.tw/${slug}`);
+  });
+
+  it('writes exactly once per transition', async () => {
+    kv.reset();
+    await adminAction('disable', '{"slug":"old"}');
+    expect(kv.puts).toBe(1);
   });
 });
 

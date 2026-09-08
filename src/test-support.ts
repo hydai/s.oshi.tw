@@ -32,7 +32,6 @@ export interface FakeKV {
   reset(): void;
   seed(...mappings: Mapping[]): void;
   read(slug: string): Mapping;
-  index(): string[];
 }
 
 /** In-memory stand-in for KVNamespace, including the bulk-get overload. */
@@ -55,9 +54,6 @@ export function fakeKV(options: { failWith?: Error } = {}): FakeKV {
     },
     read(slug) {
       return JSON.parse(store.get(`slug:${slug}`)!) as Mapping;
-    },
-    index() {
-      return JSON.parse(store.get('index:listed') ?? '[]') as string[];
     },
     kv: {
       async get(key: string | string[], type?: string) {

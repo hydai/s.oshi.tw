@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { csrf } from 'hono/csrf';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, Mapping } from './types';
-import { getMapping, putMapping, slugExists, generateSlug, getListedIndex, addToListedIndex, removeFromListedIndex, getMappingsBySlugs, getAllMappings } from './kv';
+import { getMapping, putMapping, slugExists, generateSlug, getAllMappings } from './kv';
 import { validateSubmission, couldBeSlug, canonicalSlug } from './validate';
 import { requireAdmin } from './auth';
 import { renderListingPage } from './pages/listing';
@@ -15,8 +15,13 @@ const app = new Hono<{ Bindings: Bindings; Variables: { adminEmail: string } }>(
 // --- Public routes (defined before /:slug catch-all) ---
 
 app.get('/', async (c) => {
-  const slugs = await getListedIndex(c.env.OSHI_SHORT_URLS);
-  const mappings = await getMappingsBySlugs(c.env.OSHI_SHORT_URLS, slugs);
+  // Derived from the records rather than a maintained index. The index was a
+  // single key updated by a read-modify-write, so two admin actions in flight
+  // could drop an approved link from the listing for good, and KV's one write
+  // per second per key could leave a mapping approved but unlisted with no
+  // button to repair it. Reading the records costs the same call at this size
+  // and cannot disagree with them.
+  const mappings = await getAllMappings(c.env.OSHI_SHORT_URLS);
   const listed = mappings
     .filter((m) => m.status === 'approved' && m.listed)
     .sort((a, b) => (b.approvedAt ?? '').localeCompare(a.approvedAt ?? ''));
@@ -149,16 +154,9 @@ for (const [action, transition] of Object.entries(TRANSITIONS)) {
     mapping.updatedAt = now;
     if (transition.setApproved) mapping.approvedAt = now;
 
+    // One write, so a transition either lands or does not. There is no second
+    // key that can fall out of step with it.
     await putMapping(c.env.OSHI_SHORT_URLS, mapping);
-
-    // Update listed index
-    if (mapping.listed) {
-      if (mapping.status === 'approved') {
-        await addToListedIndex(c.env.OSHI_SHORT_URLS, slug);
-      } else {
-        await removeFromListedIndex(c.env.OSHI_SHORT_URLS, slug);
-      }
-    }
 
     return c.json({ ok: true, slug });
   });

@@ -6,7 +6,6 @@ const SLUG_PREFIX = 'slug:';
 // error reach the caller. Owning the rule beside the key format means no call
 // site has to remember it.
 const MAX_KEY_BYTES = 512;
-const INDEX_LISTED = 'index:listed';
 const SLUG_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const SLUG_LENGTH = 6;
 const MAX_RETRIES = 5;
@@ -50,31 +49,6 @@ export async function generateSlug(kv: KVNamespace): Promise<string | null> {
     if (!(await slugExists(kv, slug))) return slug;
   }
   return null;
-}
-
-export async function getListedIndex(kv: KVNamespace): Promise<string[]> {
-  const data = await kv.get<string[]>(INDEX_LISTED, 'json');
-  return data ?? [];
-}
-
-export async function putListedIndex(kv: KVNamespace, slugs: string[]): Promise<void> {
-  await kv.put(INDEX_LISTED, JSON.stringify(slugs));
-}
-
-export async function addToListedIndex(kv: KVNamespace, slug: string): Promise<void> {
-  const slugs = await getListedIndex(kv);
-  if (!slugs.includes(slug)) {
-    slugs.push(slug);
-    await putListedIndex(kv, slugs);
-  }
-}
-
-export async function removeFromListedIndex(kv: KVNamespace, slug: string): Promise<void> {
-  const slugs = await getListedIndex(kv);
-  const filtered = slugs.filter((s) => s !== slug);
-  if (filtered.length !== slugs.length) {
-    await putListedIndex(kv, filtered);
-  }
 }
 
 export async function getMappingsBySlugs(kv: KVNamespace, slugs: string[]): Promise<Mapping[]> {

@@ -1,14 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import {
-  addToListedIndex,
-  getAllMappings,
-  getListedIndex,
-  getMapping,
-  getMappingsBySlugs,
-  putMapping,
-  removeFromListedIndex,
-  slugExists,
-} from './kv';
+import { getAllMappings, getMapping, getMappingsBySlugs, putMapping, slugExists } from './kv';
 import { fakeKV, mapping } from './test-support';
 
 let kv: ReturnType<typeof fakeKV>;
@@ -113,26 +104,3 @@ describe('over-long keys', () => {
   });
 });
 
-describe('listed index', () => {
-  it('treats a missing key as empty', async () => {
-    expect(await getListedIndex(kv.kv)).toEqual([]);
-  });
-
-  it('adds without duplicating and removes cleanly', async () => {
-    await addToListedIndex(kv.kv, 'a');
-    await addToListedIndex(kv.kv, 'a');
-    await addToListedIndex(kv.kv, 'b');
-    expect(await getListedIndex(kv.kv)).toEqual(['a', 'b']);
-
-    await removeFromListedIndex(kv.kv, 'a');
-    expect(await getListedIndex(kv.kv)).toEqual(['b']);
-  });
-
-  it('does not write when nothing would change', async () => {
-    await addToListedIndex(kv.kv, 'a');
-    kv.reset();
-    await addToListedIndex(kv.kv, 'a');
-    await removeFromListedIndex(kv.kv, 'absent');
-    expect(kv.puts).toBe(0);
-  });
-});

@@ -6,6 +6,11 @@ const SLUG_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const SLUG_LENGTH = 6;
 const MAX_RETRIES = 5;
 
+// A bulk get accepts up to 100 keys and counts as a single KV operation, so
+// chunking keeps both list pages far below the per-invocation operation cap
+// that one read per record would otherwise walk into.
+const BULK_GET_LIMIT = 100;
+
 export async function getMapping(kv: KVNamespace, slug: string): Promise<Mapping | null> {
   return kv.get<Mapping>(`${SLUG_PREFIX}${slug}`, 'json');
 }
@@ -61,8 +66,17 @@ export async function removeFromListedIndex(kv: KVNamespace, slug: string): Prom
 }
 
 export async function getMappingsBySlugs(kv: KVNamespace, slugs: string[]): Promise<Mapping[]> {
-  const results = await Promise.all(slugs.map((s) => getMapping(kv, s)));
-  return results.filter((m): m is Mapping => m !== null);
+  const chunks: string[][] = [];
+  for (let i = 0; i < slugs.length; i += BULK_GET_LIMIT) {
+    chunks.push(slugs.slice(i, i + BULK_GET_LIMIT).map((s) => `${SLUG_PREFIX}${s}`));
+  }
+
+  const fetched = await Promise.all(chunks.map((keys) => kv.get<Mapping>(keys, 'json')));
+
+  // Preserve the caller's slug order and drop keys that no longer exist.
+  return chunks.flatMap((keys, i) =>
+    keys.map((key) => fetched[i].get(key)).filter((m): m is Mapping => m != null),
+  );
 }
 
 export async function getAllMappings(kv: KVNamespace): Promise<Mapping[]> {

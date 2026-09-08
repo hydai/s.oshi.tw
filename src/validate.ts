@@ -93,7 +93,7 @@ export function validateSlug(slug: string): boolean {
   return true;
 }
 
-interface FieldError {
+export interface FieldError {
   field: string;
   message: string;
 }

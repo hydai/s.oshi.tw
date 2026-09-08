@@ -1,10 +1,6 @@
 import { html } from 'hono/html';
+import type { FieldError } from '../validate';
 import { pageShell } from './shell';
-
-interface FieldError {
-  field: string;
-  message: string;
-}
 
 function errorFor(errors: FieldError[], field: string): string {
   const err = errors.find((e) => e.field === field);

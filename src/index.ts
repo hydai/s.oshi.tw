@@ -3,7 +3,7 @@ import { csrf } from 'hono/csrf';
 import { HTTPException } from 'hono/http-exception';
 import type { Bindings, Mapping } from './types';
 import { getMapping, putMapping, slugExists, generateSlug, getAllMappings } from './kv';
-import { validateSubmission, couldBeSlug, canonicalSlug } from './validate';
+import { validateSubmission, couldBeSlug, canonicalSlug, validateSlug } from './validate';
 import { requireAdmin } from './auth';
 import { renderListingPage } from './pages/listing';
 import { renderSubmitForm, renderConfirmation } from './pages/form';
@@ -28,10 +28,21 @@ app.get('/', async (c) => {
   return c.html(renderListingPage(listed));
 });
 
-app.get('/new', (c) => {
+app.get('/new', async (c) => {
   const submitted = c.req.query('submitted');
   if (submitted) {
-    return c.html(renderConfirmation(submitted));
+    // This page states that a short URL was submitted and is awaiting review.
+    // It used to say that about any string in the query, which made a link on
+    // the real domain into a receipt for something nobody submitted. Look the
+    // slug up and report the status it actually has.
+    const slug = canonicalSlug(submitted);
+    const mapping = validateSlug(slug)
+      ? await getMapping(c.env.OSHI_SHORT_URLS, slug)
+      : null;
+    if (mapping) {
+      return c.html(renderConfirmation(mapping.slug, mapping.status));
+    }
+    return c.html(renderSubmitForm([], {}, '找不到這個短網址，請重新提交'), 404);
   }
   return c.html(renderSubmitForm());
 });

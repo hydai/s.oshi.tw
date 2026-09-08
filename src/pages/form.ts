@@ -145,7 +145,15 @@ export function renderSubmitForm(
   );
 }
 
-export function renderConfirmation(slug: string) {
+const STATUS_TEXT: Record<string, { label: string; color: string; blurb: string }> = {
+  pending: { label: '待審核', color: '#D97706', blurb: '你的短網址已提交，等待管理員審核' },
+  approved: { label: '已核准', color: '#059669', blurb: '這個短網址已經核准，可以使用了' },
+  disabled: { label: '已停用', color: '#6B7280', blurb: '這個短網址目前已停用' },
+  rejected: { label: '已拒絕', color: '#DC2626', blurb: '這個短網址未通過審核' },
+};
+
+export function renderConfirmation(slug: string, status = 'pending') {
+  const state = STATUS_TEXT[status] ?? STATUS_TEXT.pending;
   return pageShell(
     '提交成功',
     html`
@@ -158,13 +166,13 @@ export function renderConfirmation(slug: string) {
             提交成功！
           </h2>
           <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 24px;">
-            你的短網址已提交，等待管理員審核
+            ${state.blurb}
           </p>
           <div style="background: var(--bg-surface-frosted); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 24px;">
             <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 4px;">短網址</div>
             <div style="font-size: 18px; font-weight: 600; color: var(--accent-pink);">s.oshi.tw/${slug}</div>
             <div style="font-size: 12px; color: var(--text-tertiary); margin-top: 8px;">
-              狀態：<span style="color: #D97706; font-weight: 500;">待審核</span>
+              狀態：<span style="color: ${state.color}; font-weight: 500;">${state.label}</span>
             </div>
           </div>
           <div style="display: flex; justify-content: center; gap: 16px; font-size: 13px;">

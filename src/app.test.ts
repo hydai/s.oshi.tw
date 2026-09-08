@@ -474,6 +474,56 @@ describe('submission', () => {
   });
 });
 
+describe('confirmation page', () => {
+  // This page is where the service vouches for a slug, and it used to vouch
+  // for whatever the query said, on the real domain.
+  it('refuses to confirm a slug that was never submitted', async () => {
+    const res = await req('/new?submitted=neverexisted');
+    expect(res.status).toBe(404);
+    expect(await res.text()).not.toContain('提交成功');
+  });
+
+  it('does not reflect an arbitrary string back as a short URL', async () => {
+    const invented = '已中獎請加LINE';
+    const res = await req(`/new?submitted=${encodeURIComponent(invented)}`);
+    expect(res.status).toBe(404);
+    expect(await res.text()).not.toContain(invented);
+  });
+
+  it('confirms a slug that really was submitted', async () => {
+    kv.seed(mapping({ slug: 'realone', status: 'pending' }));
+    const res = await req('/new?submitted=realone');
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toContain('s.oshi.tw/realone');
+    expect(body).toContain('待審核');
+  });
+
+  it.each([
+    ['approved', '已核准'],
+    ['disabled', '已停用'],
+    ['rejected', '已拒絕'],
+  ] as const)('reports the real status for %s rather than always pending', async (status, label) => {
+    kv.seed(mapping({ slug: 'realone', status }));
+    const body = await (await req('/new?submitted=realone')).text();
+    expect(body).toContain(label);
+    expect(body).not.toContain('待審核');
+  });
+
+  it('round-trips a freshly submitted slug', async () => {
+    const submit = await req('/new', form({ url: 'https://example.com', title: 'T', slug: 'roundtrip' }));
+    const body = await (await req(submit.headers.get('location')!)).text();
+    expect(body).toContain('s.oshi.tw/roundtrip');
+    expect(body).toContain('待審核');
+  });
+
+  it('serves the form when no slug is given', async () => {
+    const res = await req('/new');
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('目標網址');
+  });
+});
+
 describe('listing', () => {
   it('shows only approved and opted-in mappings, newest approval first', async () => {
     kv.seed(

@@ -95,8 +95,10 @@ app.post('/new', async (c) => {
 
   await putMapping(c.env.OSHI_SHORT_URLS, mapping);
 
-  // Hono only percent-encodes a Location outside the Latin-1 range, so an
-  // accented slug would otherwise leave the header holding raw bytes.
+  // Defensive: Hono only percent-encodes a Location outside the Latin-1 range.
+  // The slug allowlist currently admits only ASCII and CJK, so no reachable
+  // slug falls in the gap, but this keeps the header correct if the allowlist
+  // is ever widened to Latin-1 letters such as e-acute.
   return c.redirect(`/new?submitted=${encodeURIComponent(slug)}`, 302);
 });
 
@@ -167,12 +169,14 @@ for (const [action, transition] of Object.entries(TRANSITIONS)) {
 app.get('/:slug', async (c) => {
   const raw = c.req.param('slug');
 
+  // Canonicalize first: NFKC can expand a segment well past the KV key limit
+  // (one Arabic ligature becomes 18 characters), so the size and shape checks
+  // have to run on the key that will actually be used.
+  const slug = canonicalSlug(raw);
+
   // Reject anything that cannot be a slug before spending a KV read, so bot
   // probes cost nothing and an over-long key returns 404 instead of throwing.
-  if (!couldBeSlug(raw)) return c.notFound();
-
-  // Same normalization as submission, so /MyLink resolves to /mylink.
-  const slug = canonicalSlug(raw);
+  if (!couldBeSlug(slug)) return c.notFound();
   const mapping = await getMapping(c.env.OSHI_SHORT_URLS, slug);
   if (!mapping || mapping.status !== 'approved') {
     return c.notFound();

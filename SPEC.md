@@ -143,9 +143,11 @@ A mapping appears on the public listing when **both** conditions are true:
 1. `status` = `approved`
 2. `listed` = `true` (submitter opted in)
 
-Listing shows all matching mappings (no pagination), sorted by approval date (newest first).
+Listing shows all matching mappings (no pagination), sorted by approval date (newest first). `approvedAt` is stamped on the first approval only, so re-enabling a disabled mapping does not move it up the list.
 
-KV is eventually consistent — after a status change, the listing may briefly show stale data. This is acceptable.
+The listing is derived from the records themselves rather than a maintained index, so it cannot disagree with them. KV is eventually consistent — after a status change, the listing may briefly show stale data. This is acceptable.
+
+A record that cannot be read is skipped and logged rather than failing the page.
 
 ### 3.5 Error Scenarios
 
@@ -154,6 +156,9 @@ KV is eventually consistent — after a status change, the listing may briefly s
 | Missing required field (`url`, `title`) | 400 Bad Request — field-level error listing missing fields |
 | Field exceeds max length or invalid format | 400 Bad Request — field-level error |
 | Duplicate slug on submission | 409 Conflict — suggest a different slug |
+| Confirmation page for an unknown slug | 404 with the submission form and an explanation |
+| `url` or `photo` over 2048 characters | 400 Bad Request — field-level error |
+| Record in KV that cannot be parsed | Skipped and logged; the rest of the page renders |
 | Slug auto-generation exhausted (5 retries) | 409 Conflict — ask submitter to provide a slug manually |
 | Invalid URL format | 400 Bad Request — field-level error |
 | Invalid slug format | 400 Bad Request — field-level error |
@@ -198,9 +203,11 @@ KV is eventually consistent — after a status change, the listing may briefly s
 }
 ```
 
-**Index key**: `index:listed` → JSON array of slugs
+**No index key.** An earlier design kept `index:listed`, a single key holding an array of slugs. Maintaining it was a read-modify-write, so overlapping admin actions dropped approved links from the listing permanently, and KV's one-write-per-second-per-key limit could leave a mapping approved but unlisted with no way back. Both pages now read the records with `list()` plus bulk `get()`, which is one call each at this size and cannot fall out of step.
 
-The listing page must load without scanning all KV keys. This index is updated on approve/disable/re-enable when `listed = true`. If the key does not exist, treat as empty array (empty listing page).
+**Key size**: KV refuses keys over 512 bytes. A slug that long cannot name a stored record, so reads treat it as a miss.
+
+**Slug canonicalization**: slugs are stored in canonical form. A lookup tries the exact path first and the canonical form second, so a link published under the older rules keeps working and keeps its path.
 
 ### URL Patterns
 
@@ -218,16 +225,23 @@ The listing page must load without scanning all KV keys. This index is updated o
 
 ### Response Formats
 
-- **HTML**: `/`, `/new`, `/admin`, `/<slug>` (404 page)
-- **JSON**: `/admin/api/*` responses (`{ "ok": true, "slug": "..." }` or `{ "ok": false, "error": "..." }`)
+- **HTML**: `/`, `/new`, `/admin`, and every unmatched path (styled 404), plus a styled 500 page when a request fails
+- **JSON**: `/admin/api/*` responses (`{ "ok": true, "slug": "..." }` or `{ "ok": false, "error": "..." }`). This holds for every reply on that prefix, including 404, 500 and the 403 a CSRF rejection produces, because the dashboard reads them all with `res.json()`
 - **Redirect**: `/<slug>` on success (302 with `Location` header)
 
-### Subrequest Budget
+Admin responses carry `Cache-Control: private, no-store` and refuse framing.
 
-Cloudflare Workers allow 1000 subrequests per invocation. Estimated usage per route:
-- Redirect: 1 KV read → **1 subrequest**
-- Listing: 1 KV read (index) + N KV reads (mappings) → **1 + N subrequests** (N = number of listed mappings)
-- Submission: 1 KV read (uniqueness) + 1 KV write + 1 KV read/write (index) → **≤ 4 subrequests**
-- Admin actions: 1 KV read + 1 KV write + 1 KV read/write (index) → **≤ 4 subrequests**
+### KV Operation Budget
 
-All well within the 1000 subrequest limit.
+Every KV call counts as a subrequest: 50 per request on the Workers free plan, 10,000 on paid, with a separate cap of 1,000 KV operations per invocation. A bulk `get()` takes up to 100 keys and counts once, which is what keeps the list pages cheap.
+
+| Route | Calls | Notes |
+|-------|-------|-------|
+| Redirect | 1, or 2 for a path that is not already canonical | Exact path first, canonical form second |
+| Listing | 1 `list()` per 1,000 keys + 1 bulk `get()` per 100 records | Reads every record, then filters |
+| Admin dashboard | Same as the listing | |
+| Confirmation page | 1 read | Confirms only a slug that exists |
+| Submission | 1 read (uniqueness) + 1 write, plus up to 5 reads when generating a slug | |
+| Admin action | 1 read + 1 write | One write, so a transition either lands or does not |
+
+At the current size every route is a handful of calls. Past a few thousand records the list pages would be worth moving onto `list()` metadata, which would make them a single call regardless of size.

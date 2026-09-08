@@ -3,9 +3,12 @@ main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
 # s.oshi.tw is served through a custom domain, and /admin is gated by
-# Cloudflare Access on that hostname. A workers.dev hostname would answer the
-# same Worker without that gate, so keep it off.
+# Cloudflare Access on that hostname. Any other hostname would answer the same
+# Worker without that gate, so keep both off. preview_urls is a separate key:
+# current wrangler defaults it off once workers_dev is off, but saying so here
+# means a wrangler upgrade cannot quietly hand out an ungated hostname.
 workers_dev = false
+preview_urls = false
 
 [vars]
 ADMIN_EMAILS = "z54981220@gmail.com"

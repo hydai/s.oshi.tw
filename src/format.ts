@@ -13,3 +13,15 @@ export function formatTaipei(iso: string): string {
   const ms = Date.parse(iso);
   return Number.isNaN(ms) ? iso : TAIPEI.format(ms);
 }
+
+const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+/**
+ * First user-perceived character. Code points are not enough: a flag is two
+ * regional indicators, a family emoji is several joined by U+200D, and a
+ * skin-tone emoji carries a modifier, so slicing any of them shows a fragment.
+ */
+export function firstGrapheme(text: string): string {
+  for (const { segment } of GRAPHEMES.segment(text)) return segment;
+  return '';
+}

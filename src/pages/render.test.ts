@@ -93,14 +93,21 @@ describe('admin dashboard', () => {
 });
 
 describe('listing page', () => {
-  it.each(['🎀リボン', '𠀀字', '子午計畫', 'Example'])(
-    'uses a whole character as the avatar initial for %j',
-    async (title) => {
-      const html = await render(renderListingPage([mapping({ title, status: 'approved', listed: true })]));
-      expect(html).toContain(`>${Array.from(title)[0]}<`);
-      expect(html).not.toContain('�');
-    },
-  );
+  // A code point is not a character: a flag is two regional indicators, a
+  // family emoji several joined by U+200D, a skin tone an emoji plus modifier.
+  it.each([
+    ['🎀リボン', '🎀'],
+    ['𠀀字', '𠀀'],
+    ['子午計畫', '子'],
+    ['Example', 'E'],
+    ['🇹🇼 台灣官方', '🇹🇼'],
+    ['👨‍👩‍👧 家族', '👨‍👩‍👧'],
+    ['👍🏽 讚', '👍🏽'],
+  ])('shows %j as the whole grapheme %j in the avatar', async (title, initial) => {
+    const html = await render(renderListingPage([mapping({ title, status: 'approved', listed: true })]));
+    expect(html).toContain(`>${initial}<`);
+    expect(html).not.toContain('�');
+  });
 
   it('names CJK faces in the font stack, since the interface is Chinese', async () => {
     const html = await render(renderListingPage([]));

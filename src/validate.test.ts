@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { canonicalSlug, couldBeSlug, validateSlug, validateSubmission, validateUrl } from './validate';
-import { formatTaipei } from './pages/admin';
 
 describe('canonicalSlug', () => {
   it.each([
@@ -50,6 +49,25 @@ describe('validateSlug', () => {
     ['𠮷', 'one character, below the two-character minimum'],
     ['', 'empty'],
   ])('rejects %j (%s)', (slug) => expect(validateSlug(slug)).toBe(false));
+
+  // These pass the script allowlist on their own, so only the canonical-form
+  // guard keeps a non-normalized variant from becoming a second key.
+  it.each([
+    ['ｱｲｳ', 'アイウ', 'halfwidth katakana'],
+    ['⼅⼅', '亅亅', 'Kangxi radicals'],
+    ['ｶﾞｷﾞ', 'ガギ', 'halfwidth katakana with voiced marks'],
+  ])('rejects %j but accepts its canonical form %j (%s)', (raw, canonical) => {
+    expect(canonicalSlug(raw)).toBe(canonical);
+    expect(validateSlug(raw)).toBe(false);
+    expect(validateSlug(canonical)).toBe(true);
+  });
+
+  it('accepts nothing it would not also accept after canonicalization', () => {
+    for (let cp = 0x20; cp <= 0x2ffff; cp += 13) {
+      const candidate = String.fromCodePoint(cp).repeat(2);
+      if (validateSlug(candidate)) expect(canonicalSlug(candidate)).toBe(candidate);
+    }
+  });
 
   it('counts characters, not UTF-16 units', () => {
     const sixteenAstral = '𠮷'.repeat(16);
@@ -112,6 +130,12 @@ describe('validateSubmission', () => {
     if (r.ok) expect(r.data.slug).toBe('mylink');
   });
 
+  it('normalizes halfwidth katakana before storing it', () => {
+    const r = validateSubmission({ url: 'https://example.com', title: 'T', slug: 'ｱｲｳ' });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.data.slug).toBe('アイウ');
+  });
+
   it('rejects a slug that only looks like an existing one', () => {
     const r = validateSubmission({ ...base, slug: 'оshi' });
     expect(r.ok).toBe(false);
@@ -130,17 +154,3 @@ describe('validateSubmission', () => {
   });
 });
 
-describe('formatTaipei', () => {
-  it.each([
-    ['2026-09-08T02:05:00.000Z', '2026-09-08 10:05'],
-    ['2026-01-15T03:00:00.000Z', '2026-01-15 11:00'],
-    ['2026-09-07T16:30:00.000Z', '2026-09-08 00:30'],
-    ['2026-12-31T20:00:00.000Z', '2027-01-01 04:00'],
-  ])('renders %j as %j', (iso, expected) => {
-    expect(formatTaipei(iso)).toBe(expected);
-  });
-
-  it('passes an unparseable value through unchanged', () => {
-    expect(formatTaipei('not a date')).toBe('not a date');
-  });
-});

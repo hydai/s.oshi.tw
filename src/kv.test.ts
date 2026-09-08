@@ -94,6 +94,25 @@ describe('single-record helpers', () => {
   });
 });
 
+describe('over-long keys', () => {
+  // KV rejects a key over 512 bytes by throwing; no stored record can have one.
+  it('reads a slug past the key limit as a miss', async () => {
+    expect(await getMapping(kv.kv, 'a'.repeat(600))).toBeNull();
+    expect(await slugExists(kv.kv, 'a'.repeat(600))).toBe(false);
+  });
+
+  it('still reads a slug that just fits', async () => {
+    const slug = 'a'.repeat(507);
+    kv.seed(mapping({ slug }));
+    expect(await getMapping(kv.kv, slug)).not.toBeNull();
+    expect(await slugExists(kv.kv, slug)).toBe(true);
+  });
+
+  it('measures bytes, not characters', async () => {
+    expect(await getMapping(kv.kv, '中'.repeat(170))).toBeNull();
+  });
+});
+
 describe('listed index', () => {
   it('treats a missing key as empty', async () => {
     expect(await getListedIndex(kv.kv)).toEqual([]);

@@ -1,6 +1,11 @@
 import type { Mapping } from './types';
 
 const SLUG_PREFIX = 'slug:';
+// KV refuses keys over 512 bytes by throwing. A slug that long cannot name a
+// stored record, so every read here treats it as a miss instead of letting the
+// error reach the caller. Owning the rule beside the key format means no call
+// site has to remember it.
+const MAX_KEY_BYTES = 512;
 const INDEX_LISTED = 'index:listed';
 const SLUG_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const SLUG_LENGTH = 6;
@@ -11,8 +16,14 @@ const MAX_RETRIES = 5;
 // that one read per record would otherwise walk into.
 const BULK_GET_LIMIT = 100;
 
+function keyFor(slug: string): string | null {
+  const key = `${SLUG_PREFIX}${slug}`;
+  return new TextEncoder().encode(key).length > MAX_KEY_BYTES ? null : key;
+}
+
 export async function getMapping(kv: KVNamespace, slug: string): Promise<Mapping | null> {
-  return kv.get<Mapping>(`${SLUG_PREFIX}${slug}`, 'json');
+  const key = keyFor(slug);
+  return key === null ? null : kv.get<Mapping>(key, 'json');
 }
 
 export async function putMapping(kv: KVNamespace, mapping: Mapping): Promise<void> {
@@ -20,8 +31,9 @@ export async function putMapping(kv: KVNamespace, mapping: Mapping): Promise<voi
 }
 
 export async function slugExists(kv: KVNamespace, slug: string): Promise<boolean> {
-  const val = await kv.get(`${SLUG_PREFIX}${slug}`);
-  return val !== null;
+  const key = keyFor(slug);
+  if (key === null) return false;
+  return (await kv.get(key)) !== null;
 }
 
 function randomSlug(): string {

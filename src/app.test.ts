@@ -106,6 +106,14 @@ describe('admin API body validation', () => {
     const res = await adminAction('approve', '{"slug":"ghost"}');
     expect(res.status).toBe(404);
   });
+
+  // KV throws on a key over 512 bytes. A slug that long cannot name a stored
+  // record, so it is a miss, not an internal error.
+  it('answers 404 rather than 500 for an over-long slug', async () => {
+    const res = await adminAction('approve', JSON.stringify({ slug: 'a'.repeat(600) }));
+    expect(res.status).toBe(404);
+    expect(await res.json()).toMatchObject({ ok: false });
+  });
 });
 
 describe('admin authorization', () => {

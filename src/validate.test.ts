@@ -151,6 +151,26 @@ describe('validateUrl', () => {
 describe('validateSubmission', () => {
   const base = { url: 'https://example.com', title: 'Example' };
 
+  // Every field counts characters the way the slug rule does, so the limit
+  // does not move depending on which Unicode plane the text lives in.
+  it.each([
+    ['title', 100],
+    ['description', 200],
+    ['author', 50],
+    ['contact', 100],
+    ['notes', 500],
+  ])('measures %s in characters, not UTF-16 units', (field, limit) => {
+    const atLimit = '🎉'.repeat(limit);
+    expect(atLimit.length).toBe(limit * 2);
+
+    const ok = validateSubmission({ ...base, [field]: atLimit });
+    expect(ok.ok).toBe(true);
+
+    const tooLong = validateSubmission({ ...base, [field]: '🎉'.repeat(limit + 1) });
+    expect(tooLong.ok).toBe(false);
+    if (!tooLong.ok) expect(tooLong.errors.map((e) => e.field)).toContain(field);
+  });
+
   it('accepts a minimal submission', () => {
     const r = validateSubmission({ ...base });
     expect(r.ok).toBe(true);

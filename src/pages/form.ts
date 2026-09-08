@@ -70,7 +70,7 @@ export function renderSubmitForm(
             <!-- Title -->
             <div>
               <label class="form-label">標題 <span class="required">*</span></label>
-              <input type="text" name="title" required placeholder="例：oshi.tw 官網" class="form-input" maxlength="100" value="${v('title')}" />
+              <input type="text" name="title" required placeholder="例：oshi.tw 官網" class="form-input" value="${v('title')}" />
               ${err('title')}
               <div class="form-hint">最多 100 字元</div>
             </div>
@@ -80,7 +80,7 @@ export function renderSubmitForm(
               <label class="form-label">自訂短網址</label>
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="color: var(--text-tertiary); font-size: 13px; white-space: nowrap;">s.oshi.tw/</span>
-                <input type="text" name="slug" placeholder="留空自動產生" class="form-input" maxlength="30" value="${v('slug')}" style="flex: 1;" />
+                <input type="text" name="slug" placeholder="留空自動產生" class="form-input" value="${v('slug')}" style="flex: 1;" />
               </div>
               ${err('slug')}
               <div class="form-hint">2-30 字元，可用英數字、中日文字與連字號；英文一律轉為小寫</div>
@@ -89,7 +89,7 @@ export function renderSubmitForm(
             <!-- Description -->
             <div>
               <label class="form-label">描述</label>
-              <textarea name="description" rows="2" placeholder="簡短描述此連結" class="form-input" maxlength="200">${v('description')}</textarea>
+              <textarea name="description" rows="2" placeholder="簡短描述此連結" class="form-input">${v('description')}</textarea>
               ${err('description')}
               <div class="form-hint">最多 200 字元</div>
             </div>
@@ -104,7 +104,7 @@ export function renderSubmitForm(
             <!-- Author -->
             <div>
               <label class="form-label">提交者名稱</label>
-              <input type="text" name="author" placeholder="你的名稱" class="form-input" maxlength="50" value="${v('author')}" />
+              <input type="text" name="author" placeholder="你的名稱" class="form-input" value="${v('author')}" />
               ${err('author')}
             </div>
 
@@ -119,7 +119,7 @@ export function renderSubmitForm(
             <!-- Notes -->
             <div>
               <label class="form-label">給管理員的備註</label>
-              <textarea name="notes" rows="2" placeholder="備註事項（不會公開）" class="form-input" maxlength="500">${v('notes')}</textarea>
+              <textarea name="notes" rows="2" placeholder="備註事項（不會公開）" class="form-input">${v('notes')}</textarea>
               ${err('notes')}
               <div class="form-hint">最多 500 字元，僅供管理員參考</div>
             </div>

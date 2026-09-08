@@ -62,12 +62,21 @@ export function validateUrl(raw: string): string | null {
   }
 }
 
+/**
+ * Characters as a reader counts them, not UTF-16 units. Without this a title
+ * of 51 emoji measures 102 and is refused, while 50 astral ideographs measure
+ * 100 and pass, so the effective limit would swing with the plane.
+ */
+function charCount(text: string): number {
+  return Array.from(text).length;
+}
+
 /** Validates an already-canonical slug; non-canonical input is rejected. */
 export function validateSlug(slug: string): boolean {
   if (canonicalSlug(slug) !== slug) return false;
   // Count characters, not UTF-16 units, so '𠮷' is one character and a 16-char
   // Extension-B name is not measured as 32.
-  const length = Array.from(slug).length;
+  const length = charCount(slug);
   if (length < SLUG_MIN || length > SLUG_MAX) return false;
   // Invisible characters would render as a blank link in the listing.
   if (/\p{Default_Ignorable_Code_Point}/u.test(slug)) return false;
@@ -120,7 +129,7 @@ export function validateSubmission(body: Record<string, string>): ValidationResu
 
   if (!title) {
     errors.push({ field: 'title', message: '請輸入標題' });
-  } else if (title.length > 100) {
+  } else if (charCount(title) > 100) {
     errors.push({ field: 'title', message: '標題不可超過 100 字' });
   }
 
@@ -128,7 +137,7 @@ export function validateSubmission(body: Record<string, string>): ValidationResu
     errors.push({ field: 'slug', message: '短網址格式不正確（2-30 字元，可用英數字、中日文字與連字號）' });
   }
 
-  if (description.length > 200) {
+  if (charCount(description) > 200) {
     errors.push({ field: 'description', message: '描述不可超過 200 字' });
   }
 
@@ -136,15 +145,15 @@ export function validateSubmission(body: Record<string, string>): ValidationResu
     errors.push({ field: 'photo', message: '圖片網址格式不正確' });
   }
 
-  if (author.length > 50) {
+  if (charCount(author) > 50) {
     errors.push({ field: 'author', message: '作者名稱不可超過 50 字' });
   }
 
-  if (contact.length > 100) {
+  if (charCount(contact) > 100) {
     errors.push({ field: 'contact', message: '聯絡方式不可超過 100 字' });
   }
 
-  if (notes.length > 500) {
+  if (charCount(notes) > 500) {
     errors.push({ field: 'notes', message: '備註不可超過 500 字' });
   }
 

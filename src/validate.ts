@@ -14,12 +14,27 @@ const SLUG_MAX = 30;
 const SLUG_CHAR = '[a-z0-9\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}ー]';
 const SLUG_RE = new RegExp(`^${SLUG_CHAR}+(?:-${SLUG_CHAR}+)*$`, 'u');
 
+// The CJK Radicals Supplement is Script=Han and, unlike the Kangxi Radicals,
+// NFKC leaves it alone. Its stable characters draw the same glyphs as ordinary
+// ideographs, so ⻤滅之刃 and 鬼滅之刃 would be two keys the admin cannot tell
+// apart on the dashboard. Refusing the block closes the same-script homograph
+// the allowlist above is meant to prevent.
+const CJK_RADICALS_SUPPLEMENT = /[\u2E80-\u2EFF]/u;
+
+// ー earns its place inside Japanese words such as ラーメン, but alone it reads
+// as a dash and walks straight past the hyphen structure rules: ーoshi, osーーhi
+// and even a slug of nothing but ーー. Require the kana that give it a reason
+// to be there.
+const PROLONGED_SOUND_MARK = /ー/u;
+const KANA = /[\p{Script=Hiragana}\p{Script=Katakana}]/u;
+
 /**
- * Cheap pre-filter for the redirect catch-all. Deliberately far more
- * permissive than validateSlug: lookups must keep working for every slug
- * ever stored, even if the submission rules are tightened later. It only
- * rejects paths that cannot be a slug at all, so bot probes and
- * favicon.ico never reach KV and over-long keys never make KV throw.
+ * Cheap pre-filter for the redirect catch-all, applied to the canonical form.
+ * Deliberately far looser than validateSlug so that tightening the submission
+ * rules does not retire a slug that is already live; note that canonicalization
+ * itself still has to be matched by whatever is stored. It rejects only paths
+ * that cannot be a slug at all, so bot probes and favicon.ico never reach KV
+ * and an over-long key never makes KV throw.
  */
 export function couldBeSlug(slug: string): boolean {
   if (!slug) return false;
@@ -56,6 +71,8 @@ export function validateSlug(slug: string): boolean {
   if (length < SLUG_MIN || length > SLUG_MAX) return false;
   // Invisible characters would render as a blank link in the listing.
   if (/\p{Default_Ignorable_Code_Point}/u.test(slug)) return false;
+  if (CJK_RADICALS_SUPPLEMENT.test(slug)) return false;
+  if (PROLONGED_SOUND_MARK.test(slug) && !KANA.test(slug)) return false;
   if (!SLUG_RE.test(slug)) return false;
   if (RESERVED_SLUGS.has(slug)) return false;
   return true;

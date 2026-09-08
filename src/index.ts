@@ -93,16 +93,11 @@ app.post('/new', async (c) => {
   }
 
   const now = new Date().toISOString();
+  // Spread rather than copy field by field: a new submission field then only
+  // has to be added to the validator, and the compiler still checks the shape.
   const mapping: Mapping = {
+    ...data,
     slug,
-    url: data.url,
-    title: data.title,
-    description: data.description,
-    photo: data.photo,
-    author: data.author,
-    contact: data.contact,
-    notes: data.notes,
-    listed: data.listed,
     status: 'pending',
     createdAt: now,
     updatedAt: now,

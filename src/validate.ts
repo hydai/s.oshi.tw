@@ -127,12 +127,17 @@ export function validateSubmission(body: Record<string, string>): ValidationResu
   const notes = (body.notes ?? '').trim();
   const listed = body.listed === 'on';
 
+  // validateUrl also normalizes, so keep what it returns rather than calling it
+  // a second time behind a non-null assertion when building the result.
+  let normalizedUrl = '';
   if (!url) {
     errors.push({ field: 'url', message: '請輸入目標網址' });
   } else if (charCount(url) > MAX_URL_LENGTH) {
     errors.push({ field: 'url', message: `目標網址不可超過 ${MAX_URL_LENGTH} 字` });
-  } else if (!validateUrl(url)) {
-    errors.push({ field: 'url', message: '請輸入有效的 HTTP/HTTPS 網址' });
+  } else {
+    const valid = validateUrl(url);
+    if (valid) normalizedUrl = valid;
+    else errors.push({ field: 'url', message: '請輸入有效的 HTTP/HTTPS 網址' });
   }
 
   if (!title) {
@@ -149,10 +154,13 @@ export function validateSubmission(body: Record<string, string>): ValidationResu
     errors.push({ field: 'description', message: '描述不可超過 200 字' });
   }
 
+  let normalizedPhoto = '';
   if (photo && charCount(photo) > MAX_URL_LENGTH) {
     errors.push({ field: 'photo', message: `圖片網址不可超過 ${MAX_URL_LENGTH} 字` });
-  } else if (photo && !validateUrl(photo)) {
-    errors.push({ field: 'photo', message: '圖片網址格式不正確' });
+  } else if (photo) {
+    const valid = validateUrl(photo);
+    if (valid) normalizedPhoto = valid;
+    else errors.push({ field: 'photo', message: '圖片網址格式不正確' });
   }
 
   if (charCount(author) > 50) {
@@ -172,11 +180,11 @@ export function validateSubmission(body: Record<string, string>): ValidationResu
   return {
     ok: true,
     data: {
-      url: validateUrl(url)!,
+      url: normalizedUrl,
       title,
       slug,
       description,
-      photo: photo ? validateUrl(photo)! : '',
+      photo: normalizedPhoto,
       author,
       contact,
       notes,

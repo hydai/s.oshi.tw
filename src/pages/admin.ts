@@ -60,6 +60,13 @@ function renderRow(m: Mapping) {
           <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; word-break: break-all;">
             → ${m.url}
           </div>
+          ${m.photo
+            ? html`<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <img src="${m.photo}" alt="" loading="lazy" referrerpolicy="no-referrer"
+                     style="width: 36px; height: 36px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: var(--bg-surface-frosted); border: 1px solid var(--border-glass);" />
+                <span style="font-size: 12px; color: var(--text-tertiary); word-break: break-all;">圖片：${m.photo}</span>
+              </div>`
+            : html``}
           ${m.description ? html`<div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 4px;">${m.description}</div>` : html``}
           ${m.author ? html`<div style="font-size: 12px; color: var(--text-tertiary);">提交者：${m.author}</div>` : html``}
           ${m.contact ? html`<div style="font-size: 12px; color: var(--text-tertiary);">聯絡：${m.contact}</div>` : html``}

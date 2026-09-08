@@ -21,15 +21,3 @@ export interface Mapping {
   updatedAt: string;
   approvedAt: string | null;
 }
-
-export interface SubmitBody {
-  url: string;
-  title: string;
-  slug?: string;
-  description?: string;
-  photo?: string;
-  author?: string;
-  contact?: string;
-  notes?: string;
-  listed?: string;
-}

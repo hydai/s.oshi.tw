@@ -1,4 +1,4 @@
-import { html, raw } from 'hono/html';
+import { html } from 'hono/html';
 import type { HtmlEscapedString } from 'hono/utils/html';
 
 export function pageShell(title: string, body: HtmlEscapedString | Promise<HtmlEscapedString>) {

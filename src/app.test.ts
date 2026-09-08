@@ -237,6 +237,33 @@ describe('status transitions', () => {
   });
 });
 
+describe('admin response headers', () => {
+  const asAdmin = { 'CF-Access-Authenticated-User-Email': ADMIN_EMAIL };
+
+  it('keeps the dashboard out of the browser cache', async () => {
+    const res = await req('/admin', { headers: asAdmin });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('cache-control')).toBe('private, no-store');
+  });
+
+  it('refuses to be framed', async () => {
+    const res = await req('/admin', { headers: asAdmin });
+    expect(res.headers.get('x-frame-options')).toBe('DENY');
+    expect(res.headers.get('content-security-policy')).toContain("frame-ancestors 'none'");
+  });
+
+  it('covers the API replies too', async () => {
+    kv.seed(mapping({ slug: 'h1', status: 'pending' }));
+    const res = await adminAction('approve', '{"slug":"h1"}');
+    expect(res.headers.get('cache-control')).toBe('private, no-store');
+  });
+
+  it('leaves public pages cacheable', async () => {
+    const res = await req('/');
+    expect(res.headers.get('cache-control')).toBeNull();
+  });
+});
+
 describe('redirect', () => {
   beforeEach(() => {
     kv.seed(

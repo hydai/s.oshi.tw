@@ -124,6 +124,19 @@ app.post('/new', async (c) => {
 // the only bodies a cross-site form can send. The dashboard's same-origin JSON
 // fetch is not a form content type and passes through untouched.
 app.use('/admin/*', csrf());
+
+// The dashboard embeds submitter contact details and notes plus the admin's
+// own address. With no freshness directives a browser may keep that on disk,
+// where back-navigation or a shared machine resurfaces it after the Access
+// session is gone. Framing protection goes here too: the action buttons are
+// one click each behind a confirm().
+app.use('/admin/*', async (c, next) => {
+  await next();
+  c.header('Cache-Control', 'private, no-store');
+  c.header('X-Frame-Options', 'DENY');
+  c.header('Content-Security-Policy', "frame-ancestors 'none'");
+});
+
 app.use('/admin/*', requireAdmin);
 
 app.get('/admin', async (c) => {

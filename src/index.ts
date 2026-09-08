@@ -1,13 +1,14 @@
 import { Hono } from 'hono';
 import { csrf } from 'hono/csrf';
+import { HTTPException } from 'hono/http-exception';
 import type { Bindings, Mapping } from './types';
 import { getMapping, putMapping, slugExists, generateSlug, getListedIndex, addToListedIndex, removeFromListedIndex, getMappingsBySlugs, getAllMappings } from './kv';
-import { validateSubmission } from './validate';
+import { validateSubmission, couldBeSlug } from './validate';
 import { requireAdmin } from './auth';
 import { renderListingPage } from './pages/listing';
 import { renderSubmitForm, renderConfirmation } from './pages/form';
 import { renderAdminDashboard } from './pages/admin';
-import { renderNotFound } from './pages/not-found';
+import { renderNotFound, renderServerError } from './pages/not-found';
 
 const app = new Hono<{ Bindings: Bindings; Variables: { adminEmail: string } }>();
 
@@ -149,14 +150,35 @@ for (const [action, transition] of Object.entries(TRANSITIONS)) {
 
 app.get('/:slug', async (c) => {
   const slug = c.req.param('slug');
-  const mapping = await getMapping(c.env.OSHI_SHORT_URLS, slug);
 
+  // Reject anything that cannot be a slug before spending a KV read, so bot
+  // probes cost nothing and an over-long key returns 404 instead of throwing.
+  if (!couldBeSlug(slug)) return c.notFound();
+
+  const mapping = await getMapping(c.env.OSHI_SHORT_URLS, slug);
   if (!mapping || mapping.status !== 'approved') {
-    return c.html(renderNotFound(), 404);
+    return c.notFound();
   }
 
   c.header('Cache-Control', 'no-store');
   return c.redirect(mapping.url, 302);
+});
+
+// --- Fallbacks ---
+
+app.notFound((c) =>
+  c.req.path.startsWith('/admin/api/')
+    ? c.json({ ok: false, error: 'Not found' }, 404)
+    : c.html(renderNotFound(), 404),
+);
+
+app.onError((err, c) => {
+  // csrf() and other middleware signal via HTTPException; keep their response.
+  if (err instanceof HTTPException) return err.getResponse();
+  console.error('Unhandled error', { path: c.req.path, err });
+  return c.req.path.startsWith('/admin/api/')
+    ? c.json({ ok: false, error: 'Internal error' }, 500)
+    : c.html(renderServerError(), 500);
 });
 
 export default app;

@@ -1,5 +1,21 @@
 const RESERVED_SLUGS = new Set(['new', 'admin']);
 
+// KV rejects keys longer than 512 bytes; 'slug:' eats 5 of them.
+const MAX_SLUG_BYTES = 512 - 'slug:'.length;
+
+/**
+ * Cheap pre-filter for the redirect catch-all. Deliberately far more
+ * permissive than validateSlug: lookups must keep working for every slug
+ * ever stored, even if the submission rules are tightened later. It only
+ * rejects paths that cannot be a slug at all, so bot probes and
+ * favicon.ico never reach KV and over-long keys never make KV throw.
+ */
+export function couldBeSlug(slug: string): boolean {
+  if (!slug) return false;
+  if (/[.\\\/\s]/.test(slug)) return false;
+  return new TextEncoder().encode(slug).length <= MAX_SLUG_BYTES;
+}
+
 export function validateUrl(raw: string): string | null {
   try {
     const url = new URL(raw);

@@ -101,12 +101,15 @@ app.get('/admin', async (c) => {
   return c.html(renderAdminDashboard(mappings, adminEmail));
 });
 
-// Admin API — status transitions
+// Admin API — status transitions.
+// setApproved stamps approvedAt, which is the public listing sort key and the
+// 核准 date on the dashboard. Only the first approval sets it; re-enabling a
+// disabled mapping must preserve the original date.
 const TRANSITIONS: Record<string, { from: string; to: string; setApproved: boolean }> = {
   approve: { from: 'pending', to: 'approved', setApproved: true },
   reject: { from: 'pending', to: 'rejected', setApproved: false },
   disable: { from: 'approved', to: 'disabled', setApproved: false },
-  enable: { from: 'disabled', to: 'approved', setApproved: true },
+  enable: { from: 'disabled', to: 'approved', setApproved: false },
 };
 
 for (const [action, transition] of Object.entries(TRANSITIONS)) {

@@ -341,6 +341,47 @@ describe('redirect', () => {
   });
 });
 
+describe('unreadable records', () => {
+  // The dashboard is the only tool for repairing bad data, so it is the one
+  // page that must not die on it.
+  it('still serves both pages when one record is unreadable', async () => {
+    kv.seed(
+      mapping({ slug: 'ok1', status: 'approved', listed: true, title: 'Good one' }),
+      mapping({ slug: 'ok2', status: 'pending', title: 'Waiting' }),
+    );
+    kv.store.set('slug:broken', '{not json');
+
+    const home = await req('/');
+    expect(home.status).toBe(200);
+    expect(await home.text()).toContain('Good one');
+
+    const dash = await req('/admin', { headers: { 'CF-Access-Authenticated-User-Email': ADMIN_EMAIL } });
+    expect(dash.status).toBe(200);
+    const body = await dash.text();
+    expect(body).toContain('Good one');
+    expect(body).toContain('Waiting');
+  });
+
+  it('answers 404 for a slug whose record cannot be read', async () => {
+    kv.store.set('slug:broken', '{not json');
+    expect((await req('/broken')).status).toBe(404);
+  });
+
+  // status is only ever written from four literals, but a hand-edited record
+  // reaching Object.prototype used to crash the whole dashboard.
+  it.each(['constructor', 'toString', 'hasOwnProperty', 'bogus'])(
+    'survives a record whose status is %j',
+    async (status) => {
+      kv.seed(mapping({ slug: 'ok', status: 'approved', listed: true, title: 'Good one' }));
+      kv.store.set('slug:odd', JSON.stringify({ ...mapping({ slug: 'odd' }), status }));
+
+      const dash = await req('/admin', { headers: { 'CF-Access-Authenticated-User-Email': ADMIN_EMAIL } });
+      expect(dash.status).toBe(200);
+      expect(await dash.text()).toContain('Good one');
+    },
+  );
+});
+
 describe('failure handling', () => {
   const broken = () => env(fakeKV({ failWith: new Error('KV unavailable') }).kv);
 

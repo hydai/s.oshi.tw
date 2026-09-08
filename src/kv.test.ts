@@ -85,6 +85,50 @@ describe('single-record helpers', () => {
   });
 });
 
+describe('unreadable records', () => {
+  // Reads used to ask KV for 'json', which parses inside the bulk call, so one
+  // bad value threw and took every other record with it.
+  const bad: [string, string][] = [
+    ['invalid JSON', '{not json'],
+    ['a bare string', '"hello"'],
+    ['null', 'null'],
+    ['an array', '[1,2,3]'],
+    ['an unknown status', JSON.stringify({ ...mapping({ slug: 'x' }), status: 'bogus' })],
+    ['a prototype-key status', JSON.stringify({ ...mapping({ slug: 'x' }), status: 'constructor' })],
+    ['a missing updatedAt', JSON.stringify({ ...mapping({ slug: 'x' }), updatedAt: undefined })],
+    ['a non-boolean listed', JSON.stringify({ ...mapping({ slug: 'x' }), listed: 'yes' })],
+  ];
+
+  it.each(bad)('skips %s rather than failing the read', async (_label, raw) => {
+    kv.store.set('slug:bad', raw);
+    expect(await getMapping(kv.kv, 'bad')).toBeNull();
+  });
+
+  it.each(bad)('lets the good records through alongside %s', async (_label, raw) => {
+    kv.seed(mapping({ slug: 'good1' }), mapping({ slug: 'good2' }));
+    kv.store.set('slug:bad', raw);
+
+    const all = await getAllMappings(kv.kv);
+    expect(all.map((m) => m.slug).sort()).toEqual(['good1', 'good2']);
+  });
+
+  it('fills in display-only fields that are absent', async () => {
+    const { description, photo, author, contact, notes, ...core } = mapping({ slug: 'sparse' });
+    kv.store.set('slug:sparse', JSON.stringify(core));
+
+    const m = await getMapping(kv.kv, 'sparse');
+    expect(m).not.toBeNull();
+    expect(m).toMatchObject({ slug: 'sparse', description: '', photo: '', author: '', contact: '', notes: '' });
+  });
+
+  it('accepts every status the app itself writes', async () => {
+    for (const status of ['pending', 'approved', 'disabled', 'rejected'] as const) {
+      kv.store.set('slug:s', JSON.stringify(mapping({ slug: 's', status })));
+      expect((await getMapping(kv.kv, 's'))?.status).toBe(status);
+    }
+  });
+});
+
 describe('over-long keys', () => {
   // KV rejects a key over 512 bytes by throwing; no stored record can have one.
   it('reads a slug past the key limit as a miss', async () => {

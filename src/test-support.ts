@@ -21,6 +21,21 @@ export function mapping(over: Partial<Mapping> = {}): Mapping {
   };
 }
 
+// The limits real KV enforces by throwing. Modelling them here is what lets
+// the guards against them be tested at all.
+const MAX_KEY_BYTES = 512;
+const MAX_BULK_KEYS = 100;
+const MAX_VALUE_BYTES = 25 * 1024 * 1024;
+
+function checkKey(key: string): void {
+  const bytes = new TextEncoder().encode(key).length;
+  if (bytes > MAX_KEY_BYTES) {
+    throw new Error(
+      `KV GET failed: 414 UTF-8 encoded length of ${bytes} exceeds key length limit of ${MAX_KEY_BYTES}.`,
+    );
+  }
+}
+
 export interface FakeKV {
   kv: KVNamespace;
   store: Map<string, string>;
@@ -59,18 +74,31 @@ export function fakeKV(options: { failWith?: Error } = {}): FakeKV {
       async get(key: string | string[], type?: string) {
         if (options.failWith) throw options.failWith;
         self.gets++;
+
+        const read = (k: string) => {
+          checkKey(k);
+          const raw = store.get(k);
+          if (raw === undefined) return null;
+          // Real KV parses only when asked to, and a parse failure surfaces to
+          // the caller. Returning parsed values regardless would hide both.
+          return type === 'json' ? JSON.parse(raw) : raw;
+        };
+
         if (Array.isArray(key)) {
+          if (key.length > MAX_BULK_KEYS) {
+            throw new Error(`KV GET failed: 400 too many keys (${key.length} > ${MAX_BULK_KEYS})`);
+          }
           self.largestBulkGet = Math.max(self.largestBulkGet, key.length);
-          return new Map(
-            key.map((k) => [k, store.has(k) ? JSON.parse(store.get(k)!) : null]),
-          );
+          return new Map(key.map((k) => [k, read(k)]));
         }
-        const raw = store.get(key) ?? null;
-        if (raw === null) return null;
-        return type === 'json' ? JSON.parse(raw) : raw;
+        return read(key);
       },
       async put(key: string, value: string) {
         if (options.failWith) throw options.failWith;
+        checkKey(key);
+        if (new TextEncoder().encode(value).length > MAX_VALUE_BYTES) {
+          throw new Error('KV PUT failed: 413 value too large');
+        }
         self.puts++;
         store.set(key, value);
       },

@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { csrf } from 'hono/csrf';
 import type { Bindings, Mapping } from './types';
 import { getMapping, putMapping, slugExists, generateSlug, getListedIndex, addToListedIndex, removeFromListedIndex, getMappingsBySlugs, getAllMappings } from './kv';
 import { validateSubmission } from './validate';
@@ -86,6 +87,10 @@ app.post('/new', async (c) => {
 
 // --- Admin routes ---
 
+// CSRF: hono/csrf guards form-style content types (incl. text/plain), which are
+// the only bodies a cross-site form can send. The dashboard's same-origin JSON
+// fetch is not a form content type and passes through untouched.
+app.use('/admin/*', csrf());
 app.use('/admin/*', requireAdmin);
 app.use('/admin', requireAdmin);
 

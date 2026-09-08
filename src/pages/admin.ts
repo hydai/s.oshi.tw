@@ -1,17 +1,7 @@
 import { html } from 'hono/html';
 import type { Mapping, MappingStatus } from '../types';
+import { formatTaipei } from '../format';
 import { pageShell } from './shell';
-
-/**
- * Timestamps are stored as UTC ISO strings but read by an admin in Taiwan,
- * which has been UTC+8 year-round since 1980. A fixed offset avoids depending
- * on time-zone data being present in the runtime.
- */
-export function formatTaipei(iso: string): string {
-  const ms = Date.parse(iso);
-  if (Number.isNaN(ms)) return iso;
-  return new Date(ms + 8 * 60 * 60 * 1000).toISOString().slice(0, 16).replace('T', ' ');
-}
 
 const STATUS_LABELS: Record<MappingStatus, string> = {
   pending: '待審核',
@@ -72,10 +62,12 @@ function renderRow(m: Mapping) {
             → ${m.url}
           </div>
           ${m.photo
-            ? html`<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                <img src="${m.photo}" alt="" loading="lazy" referrerpolicy="no-referrer"
-                     style="width: 36px; height: 36px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: var(--bg-surface-frosted); border: 1px solid var(--border-glass);" />
-                <span style="font-size: 12px; color: var(--text-tertiary); word-break: break-all;">圖片：${m.photo}</span>
+            ? html`<div style="margin-bottom: 4px;">
+                <div style="font-size: 12px; color: var(--text-tertiary); word-break: break-all;">圖片：${m.photo}</div>
+                <button type="button" data-photo="${m.photo}" onclick="showPhoto(this)"
+                        style="margin-top: 4px; padding: 3px 10px; border: 1px solid var(--border-glass); border-radius: 6px; background: var(--bg-surface-frosted); color: var(--text-secondary); font-size: 11px; font-family: inherit; cursor: pointer;">
+                  顯示圖片預覽
+                </button>
               </div>`
             : html``}
           ${m.description ? html`<div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 4px;">${m.description}</div>` : html``}
@@ -152,6 +144,18 @@ export function renderAdminDashboard(mappings: Mapping[], adminEmail: string) {
       </div>
 
       <script>
+        // The photo URL comes from an anonymous submitter. Loading it on page
+        // render would make the reviewer's browser call that host on every
+        // dashboard visit, so it waits for an explicit click.
+        function showPhoto(btn) {
+          const img = document.createElement('img');
+          img.src = btn.dataset.photo;
+          img.alt = '';
+          img.referrerPolicy = 'no-referrer';
+          img.style.cssText = 'max-width: 220px; max-height: 220px; margin-top: 6px; border-radius: 8px; display: block; border: 1px solid rgba(0,0,0,0.08);';
+          btn.replaceWith(img);
+        }
+
         async function adminAction(action, slug) {
           if (!confirm('確定要執行此操作？')) return;
           try {

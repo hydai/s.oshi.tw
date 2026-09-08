@@ -51,6 +51,29 @@ describe('admin API CSRF', () => {
     },
   );
 
+  // The dashboard reads every reply with res.json(), so a plain-text rejection
+  // reaches the admin as the generic 網路錯誤 instead of the real reason.
+  it('rejects in JSON the dashboard can actually read', async () => {
+    const res = await adminAction('approve', '{"slug":"evil","x":"="}', {
+      'CF-Access-Authenticated-User-Email': ADMIN_EMAIL,
+      'Content-Type': 'text/plain',
+      Origin: 'https://evil.example',
+    });
+    expect(res.status).toBe(403);
+    expect(res.headers.get('content-type')).toContain('application/json');
+    expect(await res.json()).toMatchObject({ ok: false });
+  });
+
+  it('leaves non-API pages with the middleware response', async () => {
+    const res = await req('/admin', {
+      method: 'POST',
+      headers: { 'CF-Access-Authenticated-User-Email': ADMIN_EMAIL, 'Content-Type': 'text/plain', Origin: 'https://evil.example' },
+      body: 'x',
+    });
+    expect(res.status).toBe(403);
+    expect(res.headers.get('content-type')).not.toContain('application/json');
+  });
+
   it('allows the dashboard same-origin JSON fetch', async () => {
     const res = await adminAction('approve', '{"slug":"evil"}');
     expect(res.status).toBe(200);

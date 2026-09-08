@@ -195,10 +195,20 @@ app.notFound((c) =>
 );
 
 app.onError((err, c) => {
-  // csrf() and other middleware signal via HTTPException; keep their response.
-  if (err instanceof HTTPException) return err.getResponse();
+  const isAdminApi = c.req.path.startsWith('/admin/api/');
+
+  // Middleware signals via HTTPException. csrf() answers with a plain-text
+  // "Forbidden", which the dashboard cannot read: every reply goes through
+  // res.json(), so the one failure the middleware exists to produce would
+  // surface as the generic 網路錯誤. Reshape it for the API prefix.
+  if (err instanceof HTTPException) {
+    return isAdminApi
+      ? c.json({ ok: false, error: err.message || 'Forbidden' }, err.status)
+      : err.getResponse();
+  }
+
   console.error('Unhandled error', { path: c.req.path, err });
-  return c.req.path.startsWith('/admin/api/')
+  return isAdminApi
     ? c.json({ ok: false, error: 'Internal error' }, 500)
     : c.html(renderServerError(), 500);
 });

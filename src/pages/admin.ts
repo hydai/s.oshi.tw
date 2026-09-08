@@ -3,6 +3,8 @@ import type { Mapping, MappingStatus } from '../types';
 import { formatTaipei } from '../format';
 import { pageShell } from './shell';
 
+const SECTION_ORDER: MappingStatus[] = ['pending', 'approved', 'disabled', 'rejected'];
+
 const STATUS_LABELS: Record<MappingStatus, string> = {
   pending: '待審核',
   approved: '已核准',
@@ -88,21 +90,17 @@ function renderRow(m: Mapping) {
 }
 
 export function renderAdminDashboard(mappings: Mapping[], adminEmail: string) {
-  const groups: Record<string, Mapping[]> = {
-    pending: [],
-    approved: [],
-    disabled: [],
-    rejected: [],
-  };
+  // A Map rather than an object literal: an object carries Object.prototype, so
+  // a status of "constructor" or "toString" resolved to an inherited function
+  // that is truthy and has no push, which crashed the page rather than being
+  // ignored. One source for the order and the buckets, so they cannot drift.
+  const groups = new Map<MappingStatus, Mapping[]>(SECTION_ORDER.map((s) => [s, []]));
   for (const m of mappings) {
-    groups[m.status]?.push(m);
+    groups.get(m.status)?.push(m);
   }
-  // Sort each group by updatedAt desc
-  for (const group of Object.values(groups)) {
+  for (const group of groups.values()) {
     group.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
-
-  const sectionOrder: MappingStatus[] = ['pending', 'approved', 'disabled', 'rejected'];
 
   return pageShell(
     '管理後台',
@@ -121,14 +119,14 @@ export function renderAdminDashboard(mappings: Mapping[], adminEmail: string) {
           <a href="/" class="link" style="font-size: 13px;">← 返回首頁</a>
         </div>
 
-        ${sectionOrder.map(
+        ${SECTION_ORDER.map(
           (status) => html`
-            ${groups[status].length > 0
+            ${(groups.get(status) ?? []).length > 0
               ? html`
                   <h2 style="font-size: 16px; font-weight: 600; color: ${STATUS_COLORS[status]}; margin-bottom: 12px; margin-top: 24px;">
-                    ${STATUS_LABELS[status]}（${groups[status].length}）
+                    ${STATUS_LABELS[status]}（${(groups.get(status) ?? []).length}）
                   </h2>
-                  ${groups[status].map(renderRow)}
+                  ${(groups.get(status) ?? []).map(renderRow)}
                 `
               : html``}
           `,

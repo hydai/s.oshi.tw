@@ -83,6 +83,33 @@ describe('admin dashboard', () => {
     expect(await actions('rejected')).toEqual([]);
   });
 
+  // The grouping used to index an object literal, so a status matching an
+  // Object.prototype key resolved to an inherited function and crashed the page.
+  it.each(['constructor', 'toString', 'hasOwnProperty', '__proto__', 'bogus'])(
+    'does not crash on a record whose status is %j',
+    async (status) => {
+      const odd = { ...mapping({ slug: 'odd' }), status } as unknown as Parameters<typeof renderAdminDashboard>[0][number];
+      const html = await render(renderAdminDashboard([mapping({ slug: 'fine', status: 'pending' }), odd], 'a@e.com'));
+      expect(html).toContain('待審核');
+    },
+  );
+
+  it('lists each status section once, in a fixed order', async () => {
+    const html = await render(
+      renderAdminDashboard(
+        (['pending', 'approved', 'disabled', 'rejected'] as const).map((status) => mapping({ slug: status, status })),
+        'a@e.com',
+      ),
+    );
+    // Section headings read "label（count）"; the per-row badges never do.
+    const headings = ['待審核', '已核准', '已停用', '已拒絕'].map((label) => `${label}（`);
+    for (const heading of headings) {
+      expect(html.split(heading)).toHaveLength(2);
+    }
+    const order = headings.map((heading) => html.indexOf(heading));
+    expect([...order]).toEqual([...order].sort((a, b) => a - b));
+  });
+
   it('keeps private fields visible to the admin', async () => {
     const html = await render(
       renderAdminDashboard([mapping({ contact: 'me@example.com', notes: 'please approve' })], 'a@e.com'),
